@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Verification Code</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .otp-input {
+            letter-spacing: 5px;
+            font-size: 24px;
+            text-align: center;
+            width: 200px;
+            margin: 0 auto;
+        }
+        .error-msg {
+            color: #ef4444;
+            background: #fee2e2;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 500px; text-align: center;">
+        <h1>Verification</h1>
+        <p>We sent a 6-digit code to your email.</p>
+        
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <form action="/check-otp" method="POST" class="user-form">
+            <div class="form-group" style="text-align: center;">
+                <label for="otp_input">Enter OTP Code:</label>
+                <input type="text" id="otp_input" name="otp_input" class="otp-input" maxlength="6" placeholder="123456" required>
+            </div>
+            
+            <button type="submit" class="btn">Verify & Start</button>
+        </form>
+        
+        <br>
+        <a href="/" class="btn secondary-btn" style="font-size: 0.9em;">Back / Resend</a>
+    </div>
+</body>
+</html>

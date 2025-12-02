@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Personality Report</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- Report Specific Styles --- */
+        .question-detail {
+            border-left: 5px solid #3498db;
+            margin-bottom: 25px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .question-detail h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+        .metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #eee;
+        }
+        
+        .metric-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border: 1px solid #eee;
+            background-color: #f8f9fa;
+            color: #555;
+        }
+
+        /* --- THEME CLASSES (Fixes the Style Error) --- */
+        /* Personality Badge Colors */
+        .theme-yellow { background-color: #fef08a; color: #854d0e; border: 2px solid #facc15; }
+        .theme-blue   { background-color: #dbeafe; color: #1e40af; border: 2px solid #60a5fa; }
+        .theme-green  { background-color: #dcfce7; color: #166534; border: 2px solid #4ade80; }
+        .theme-red    { background-color: #fee2e2; color: #991b1b; border: 2px solid #f87171; }
+        .theme-neutral{ background-color: #f3f4f6; color: #4b5563; border: 2px solid #d1d5db; }
+
+        /* Metric Badge Colors */
+        .badge-positive   { background: #dcfce7; color: #166534; border-color: #86efac; }
+        .badge-negative   { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .badge-neutral    { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+        
+        .badge-dynamic    { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+        .badge-monotone   { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
+        
+        .badge-focus-high { background: #dcfce7; color: #166534; border-color: #86efac; }
+        .badge-focus-low  { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+        .chart-container {
+            width: 80%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        
+        /* Base style for the big result badge */
+        .color-result {
+            padding: 15px 30px; 
+            border-radius: 50px; 
+            margin: 15px auto; 
+            display: inline-block; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container report-container">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1>Personality Analysis Report</h1>
+            <p style="color: #666;">Candidate: <strong>{{ user.name }}</strong></p>
+        </div>
+
+        <div class="report-section color-section">
+            <h2>Primary Personality Archetype</h2>
+
+            {% if profile and profile.primary_color %}
+                {# Determine which CSS class to use #}
+                {% set p_class = 'theme-neutral' %}
+                {% if 'Yellow' in profile.primary_color %}
+                    {% set p_class = 'theme-yellow' %}
+                {% elif 'Blue' in profile.primary_color %}
+                    {% set p_class = 'theme-blue' %}
+                {% elif 'Green' in profile.primary_color %}
+                    {% set p_class = 'theme-green' %}
+                {% elif 'Red' in profile.primary_color %}
+                    {% set p_class = 'theme-red' %}
+                {% endif %}
+
+                <div class="color-result {{ p_class }}">
+                    {{ profile.primary_color }}
+                </div>
+
+                <p class="description">{{ profile.description | replace('\n', '<br>') | safe | default('Description not available.') }}</p>
+
+                {% if profile.resume_insight %}
+                <div style="background-color: #fffbeb; color: #92400e; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #fcd34d; text-align: left;">
+                    <strong>📄 Resume vs. Reality:</strong> {{ profile.resume_insight }}
+                </div>
+                {% endif %}
+
+            {% else %}
+                <p class="description">Personality analysis could not be completed.</p>
+            {% endif %}
+        </div>
+
+        <div class="report-section">
+            <h2>Growth Suggestions</h2>
+            <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+                <p class="suggestion" style="margin: 0; color: #0c4a6e;">{{ profile.suggestion | default('Suggestions not available.') }}</p>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <h2>Overall Emotion Summary</h2>
+            {% if overall_emotion_percentages %}
+            <div class="chart-container">
+                <canvas id="emotionChart" data-emotions='{{ overall_emotion_percentages|tojson|safe }}'></canvas>
+            </div>
+            {% else %}
+            <p>No clear emotional data could be gathered.</p>
+            {% endif %}
+        </div>
+
+        <div class="report-section">
+            <h2>Detailed Interview Transcript</h2>
+            {% for detail in question_details %}
+                
+                {# Define Classes for Metrics #}
+                {% set sent_class = 'badge-neutral' %}
+                {% set sent_icon = '😐 Neutral' %}
+                {% if detail.sentiment > 0.1 %}
+                    {% set sent_class = 'badge-positive' %}
+                    {% set sent_icon = '😊 Positive' %}
+                {% elif detail.sentiment < -0.1 %}
+                    {% set sent_class = 'badge-negative' %}
+                    {% set sent_icon = '😟 Negative' %}
+                {% endif %}
+
+                {% set tone_class = '' %}
+                {% if 'Dynamic' in detail.audio_tone %}
+                    {% set tone_class = 'badge-dynamic' %}
+                {% elif 'Monotone' in detail.audio_tone %}
+                    {% set tone_class = 'badge-monotone' %}
+                {% endif %}
+
+                {% set focus_class = '' %}
+                {% if detail.focus_score > 80 %}
+                    {% set focus_class = 'badge-focus-high' %}
+                {% elif detail.focus_score < 50 %}
+                    {% set focus_class = 'badge-focus-low' %}
+                {% endif %}
+
+                <div class="question-detail">
+                    <h3>{{ detail.question }}</h3>
+                    <p style="font-style: italic; color: #555;">"{{ detail.answer }}"</p>
+                    
+                    <div class="metrics">
+                        <span class="metric-badge {{ sent_class }}">
+                            {{ sent_icon }} ({{ detail.sentiment }})
+                        </span>
+
+                        <span class="metric-badge">👁️ Blinks: {{ detail.blink_rate }}/s</span>
+
+                        <span class="metric-badge {{ tone_class }}">
+                            🎙️ {{ detail.audio_tone }}
+                        </span>
+
+                        <span class="metric-badge {{ focus_class }}">
+                            🎯 Focus: {{ detail.focus_score }}%
+                        </span>
+
+                        <span class="metric-badge">⚡ {{ detail.wpm }} WPM</span>
+                    </div>
+
+                    {% if detail.emotions %}
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                        <strong>Detected Emotions:</strong>
+                        {% for emotion, percentage in detail.emotions.items() %}
+                            {{ emotion|capitalize }}: {{ percentage }}%{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+             <a href="{{ url_for('download_report') }}" class="btn">Download Report (PDF)</a>
+             <a href="/" class="btn secondary-btn" style="margin-left: 10px;">Start New Interview</a>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('emotionChart');
+        if (canvas) {
+            const rawData = canvas.dataset.emotions;
+            if (rawData) {
+                const emotionData = JSON.parse(rawData);
+                if (Object.keys(emotionData).length > 0) {
+                    new Chart(canvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(emotionData).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                            datasets: [{
+                                data: Object.values(emotionData),
+                                backgroundColor: [
+                                    'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)', 
+                                    'rgba(54, 162, 235, 0.8)', 'rgba(255, 99, 132, 0.8)', 
+                                    'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)', 
+                                    'rgba(201, 203, 207, 0.8)'
+                                ],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                           responsive: true,
+                           plugins: { legend: { position: 'right' } }
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

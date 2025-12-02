@@ -1,0 +1,15 @@
+flask
+openai-whisper
+deepface
+numpy
+opencv-python
+dlib
+tf-keras
+vaderSentiment
+reportlab
+google-generativeai
+Flask-Mail
+pypdf
+librosa
+mediapipe
+
