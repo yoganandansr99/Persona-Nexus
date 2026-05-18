@@ -1,0 +1,164 @@
+========================================================================
+                      PERSONA NEXUS — ARCHITECTURE & STRUCTURE
+========================================================================
+
+This document outlines the complete codebase architecture of the Persona Nexus 
+AI Interview and Practice Platform, covering both the Frontend Layout 
+and Backend Engine.
+
+------------------------------------------------------------------------
+1. DIRECTORY TREE OVERVIEW
+------------------------------------------------------------------------
+
+ai_minor/
+│
+├── run.py                 # Application entry point (starts the Flask dev server)
+├── requirements.txt       # Python dependencies (Flask, Whisper, MediaPipe, Groq, etc.)
+├── questions.json         # JSON file storing default practice/interview questions
+├── interviews.db          # SQLite Database storing users, session status, and AI reports
+├── .env                   # Environment configurations (API keys, email SMTP credentials)
+├── .gitignore             # Git ignored files configuration
+│
+├── app/                   # BACKEND APPLICATION PACKAGE
+│   ├── __init__.py        # Flask app init, model loading, blueprint registration
+│   ├── db.py              # SQLite database connection helpers
+│   ├── email.py           # Services for sending OTPs, candidate invites, and PDF reports
+│   ├── routes.py          # Legacy/Core routes (transcription, AI reports, main portals)
+│   ├── routes_candidate.py# Legacy candidate routing
+│   ├── routes_company.py  # Legacy recruiter/company routing
+│   ├── routes_user.py     # Simple user routing
+│   ├── analysis.py        # Core AI engine (Whisper, Groq, sentiment, facial blink EAR analysis)
+│   ├── utils.py           # Utility scripts (e.g., ReportLab PDF report generator)
+│   │
+│   ├── auth/              # Authentication Blueprint
+│   │   ├── __init__.py    # Blueprint definition
+│   │   ├── decorators.py  # User role validation & authentication decorators
+│   │   └── helpers.py     # OTP generation & password hashing utilities
+│   │
+│   ├── candidate_portal/  # Candidate Portal Blueprint
+│   │   ├── __init__.py    # Blueprint definition
+│   │   └── routes.py      # Candidate dashboard, verification, and session checks
+│   │
+│   ├── practice/          # Practice Portal Blueprint
+│   │   ├── __init__.py    # Blueprint definition
+│   │   └── routes.py      # Practice interview dashboard & practice workspace routing
+│   │
+│   ├── recruiter/         # Recruiter Portal Blueprint
+│   │   ├── __init__.py    # Blueprint definition
+│   │   └── routes.py      # Recruiter portal (invites, report retrieval, metrics)
+│   │
+│   ├── repositories/      # Data Access Repositories (DAL)
+│   │   ├── __init__.py    # Exports all database repositories
+│   │   ├── interviews_repo.py # Interview database operations (create, update state)
+│   │   ├── reports_repo.py    # Report feedback & evaluation scoring database operations
+│   │   └── users_repo.py      # Recruiter, candidate, and practice user records DB operations
+│   │
+│   └── services/          # Business Logic Layer
+│       ├── __init__.py    # Service level exports
+│       └── interview_service.py # Core business rules for managing user session lifecycles
+│
+├── templates/             # FRONTEND JINJA2 TEMPLATE ENGINE
+│   ├── about.html         # Project description & about page
+│   ├── welcome.html       # Landing page (authentication selection)
+│   ├── disqualified.html  # Proctoring trigger page (shown upon cheating or eye focus violations)
+│   ├── processing.html    # Analyzing/Loading page for candidates during transcription and scoring
+│   ├── report.html        # Interactive candidate analysis report dashboard (with Chart.js)
+│   ├── support.html       # Support request page
+│   ├── verify_otp.html    # Two-factor OTP input gate screen
+│   ├── user_portal.html   # Navigational user landing zone
+│   ├── company_dashboard.html # Old company landing view (legacy)
+│   ├── interview.html     # Real-time AI interview session (WebRTC webcam stream, recording, question-answer)
+│   │
+│   ├── layouts/           # Page Shell Layouts
+│   │   └── base.html      # Main master template: links standard CSS styles, scripts, and navbar/footer
+│   │
+│   ├── interview/         # Live Interview Access pages
+│   │   ├── access_gate.html  # Pin validation portal to begin scheduled live interviews
+│   │   ├── invalid_code.html # Warning page shown for invalid or expired scheduled interview pins
+│   │   └── start.html        # Pre-interview setup (device check for camera/mic & candidate instructions)
+│   │
+│   ├── practice/          # Student Practice Portal pages
+│   │   ├── practice_landing.html   # Practice portal home & registration
+│   │   ├── practice_dashboard.html # Practice statistics, scoring history, and past report cards
+│   │   └── practice_begin.html     # Custom practice workbench with real-time video simulation
+│   │
+│   └── recruiter/         # Recruiter Platform pages
+│       └── recruiter_dashboard.html # Primary administrative control panel for recruiters
+│
+└── static/                # FRONTEND STATIC ASSETS & MODELS
+    ├── style.css          # Legacy fallback stylesheets for specific forms and inputs
+    ├── face_landmarker.task # Local trained model data file used by MediaPipe FaceMesh
+    │
+    ├── css/
+    │   └── theme.css      # Custom global UI skin: defines variable grids, animations, glass cards
+    │
+    ├── js/
+    │   └── site.js        # Global interactive scripts (such as mobile navbar triggers)
+    │
+    └── portals/
+        └── practice.css   # Stylesheets custom-designed specifically for student practice widgets
+
+
+------------------------------------------------------------------------
+2. DETAILED BACKEND ARCHITECTURE (app/)
+------------------------------------------------------------------------
+
+The backend is built as a modular Model-View-Controller (MVC) style Flask 
+web application featuring dedicated blueprint packages and custom routing models.
+
+* App Initialization (app/__init__.py):
+  Configures logging, reads environment keys from .env (SMTP configurations, 
+  Groq API credentials), registers Flask blueprints, and initializes core models:
+  - Whisper ("base" speech transcription model loaded on start)
+  - VADER Sentiment (for scoring candidate speech emotional tones)
+  - MediaPipe configurations (configured landmark indices 33, 133, 159, 145 
+    for blink tracking/EAR).
+
+* Core ML Engine (app/analysis.py):
+  Handles complex ML evaluation routines:
+  - Transcribing recording audio streams using OpenAI Whisper.
+  - Analyzing sentiment tones utilizing VADER Sentiment Analyzer.
+  - Executing real-time or post-interview facial feedback metrics (blink tracking 
+    and direct focus calculations using MediaPipe FaceMesh).
+  - Calling Google Gemini API (via Groq/Google Generative AI clients with key rotation) 
+    to evaluate responses against Key Expected Points, assigning structured score metrics.
+
+* Business Logic & DAL (app/repositories/ & app/services/):
+  Adheres to the repository pattern for clean separation of database concerns:
+  - interviews_repo.py, reports_repo.py, users_repo.py manage clean parameter passing 
+    to the SQLite connection pool (defined in db.py).
+  - interview_service.py dictates high-level logic rules (e.g. checking whether 
+    an interview invitation key is single-use, evaluating session validity).
+
+* Email Notification System (app/email.py):
+  Leverages Flask-Mail to coordinate outbound notifications:
+  - Instantly broadcasts generated 2-Factor OTPs to candidates and recruiter registers.
+  - Distributes secure, automated PDF report summaries directly to recruiters.
+
+
+------------------------------------------------------------------------
+3. DETAILED FRONTEND ARCHITECTURE (templates/ & static/)
+------------------------------------------------------------------------
+
+The user interface uses clean Jinja2 markup designed with glassmorphism aesthetics, 
+responsive grids, CSS variables, and modern fonts without bloated client-side 
+framework requirements.
+
+* The Layout Shell (templates/layouts/base.html):
+  Defines the responsive navigation headers, status panels, dark-mode styling variables, 
+  and includes central assets:
+  - static/css/theme.css (custom styling guidelines: rounded borders, translucent cards, 
+    smooth transition micro-animations, glass cards)
+  - static/js/site.js (global viewport events)
+
+* AI Interview Panel (templates/interview.html & templates/practice/practice_begin.html):
+  - Utilizes browser MediaRecorder API to cleanly capture and save candidate audio-visual streams.
+  - Features high-fidelity WebRTC preview displays.
+  - Directly feeds live webcam streams into client-side MediaPipe JS libraries to perform 
+    eye-focus verification, triggering anti-cheat mechanisms instantly if eye focus is lost.
+
+* Reporting Center (templates/report.html):
+  - Beautifully translates generated backend assessment metrics into visuals.
+  - Integrates Chart.js to plot sentiment flows, technical score categories, and eye focus levels.
+  - Lists question-by-question breakdown, including the candidate's exact transcription, 
+    AI constructive criticisms, and key expected benchmarks compared against candidate output.

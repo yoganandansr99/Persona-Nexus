@@ -1,0 +1,20 @@
+{% extends "layouts/base.html" %}
+{% block title %}Interview terminated{% endblock %}
+{% block content %}
+<div class="nx-card" style="max-width:560px;margin:0 auto;text-align:center;border:1px solid rgba(251,113,133,.35)!important;">
+        <h1 class="nx-hero-title" style="font-size:1.75rem;color:#fb7185!important;">Interview terminated</h1>
+        <h2 style="font-weight:600;">Disqualification notice</h2>
+        
+        <div class="report-section" style="margin-top: 24px; text-align: left; border-left: 4px solid #fb7185;">
+            <p style="font-size: 1.05em; color: #fecdd3;">
+                <strong>Hello {{ user_data.name }},</strong><br><br>
+                This session was disqualified because focus / proctoring rules were exceeded.
+            </p>
+            <p style="color: #fecdd3;">
+                The hiring team was notified. No personality report is issued for this attempt.
+            </p>
+        </div>
+        
+        <a href="{{ url_for('welcome') }}" class="btn nx-btn" style="margin-top: 24px; background: linear-gradient(135deg,#fb7185,#e11d48)!important;">Return home</a>
+</div>
+{% endblock %}

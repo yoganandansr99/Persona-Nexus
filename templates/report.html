@@ -1,0 +1,497 @@
+{% extends "layouts/base.html" %}
+{% block title %}Interview Report — {{ user.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --accent: #7c3aed;
+        --accent-light: #a78bfa;
+        --accent-glow: rgba(124, 58, 237, 0.35);
+        --emerald: #10b981;
+        --emerald-glow: rgba(16, 185, 129, 0.3);
+        --bg-glass: rgba(255, 255, 255, 0.03);
+        --bg-glass-hover: rgba(255, 255, 255, 0.06);
+        --border-glass: rgba(255, 255, 255, 0.08);
+        --border-glass-hover: rgba(255, 255, 255, 0.15);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+        0%, 100% { box-shadow: 0 0 20px var(--accent-glow), 0 0 60px rgba(124, 58, 237, 0.1); }
+        50% { box-shadow: 0 0 30px var(--accent-glow), 0 0 80px rgba(124, 58, 237, 0.2); }
+    }
+    @keyframes orbFloat {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(30px, -20px) scale(1.05); }
+        66% { transform: translate(-20px, 15px) scale(0.95); }
+    }
+    @keyframes progressGrow {
+        from { width: 0; }
+    }
+    @keyframes circleReveal {
+        from { stroke-dashoffset: 440; }
+    }
+    @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+    }
+
+    /* === HERO SECTION === */
+    .report-hero {
+        position: relative;
+        border-radius: 28px;
+        padding: 3.5rem 2rem 3rem;
+        text-align: center;
+        border: 1px solid var(--border-glass);
+        backdrop-filter: blur(20px);
+        margin-bottom: 2.5rem;
+        overflow: hidden;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(15, 23, 42, 0.9), rgba(79, 70, 229, 0.06));
+        animation: fadeInUp 0.7s ease-out;
+    }
+    .report-hero::before {
+        content: '';
+        position: absolute;
+        top: -80px; right: -80px;
+        width: 250px; height: 250px;
+        background: radial-gradient(circle, rgba(124, 58, 237, 0.15), transparent 70%);
+        border-radius: 50%;
+        animation: orbFloat 8s ease-in-out infinite;
+        pointer-events: none;
+    }
+    .report-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -60px; left: -40px;
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.1), transparent 70%);
+        border-radius: 50%;
+        animation: orbFloat 10s ease-in-out infinite reverse;
+        pointer-events: none;
+    }
+
+    /* === SCORE CIRCLES === */
+    .score-circle-wrap {
+        position: relative;
+        width: 180px; height: 180px;
+        margin: 0 auto 1.5rem;
+        animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+    .score-circle-svg {
+        transform: rotate(-90deg);
+        width: 100%; height: 100%;
+        filter: drop-shadow(0 0 12px var(--accent-glow));
+    }
+    .score-circle-bg {
+        fill: none;
+        stroke: rgba(255,255,255,0.04);
+        stroke-width: 8;
+    }
+    .score-circle-progress {
+        fill: none;
+        stroke: url(#scoreGradient);
+        stroke-width: 10;
+        stroke-linecap: round;
+        stroke-dasharray: 440;
+        stroke-dashoffset: calc(440 - (440 * {{ profile.overall_performance }}) / 100);
+        animation: circleReveal 2s ease-out forwards;
+    }
+    .score-text {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+    .score-number {
+        font-size: 3.2rem;
+        font-weight: 900;
+        display: block;
+        line-height: 1;
+        background: linear-gradient(135deg, #fff 30%, var(--accent-light));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Inter', sans-serif;
+    }
+    .score-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 600;
+    }
+    .archetype-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255,255,255,0.04);
+        padding: 10px 22px;
+        border-radius: 999px;
+        border: 1px solid var(--border-glass);
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: var(--text-primary);
+        backdrop-filter: blur(8px);
+        animation: fadeInUp 1s ease-out 0.6s both;
+    }
+    .nx-hero-title {
+        animation: fadeInUp 0.9s ease-out 0.4s both;
+    }
+
+    /* === GRID LAYOUT === */
+    .report-grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    /* === GLASS CARDS === */
+    .nx-card {
+        background: linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+        border: 1px solid var(--border-glass);
+        backdrop-filter: blur(16px);
+        border-radius: 22px;
+        padding: 2rem;
+        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s, box-shadow 0.4s;
+        animation: fadeInUp 0.8s ease-out 0.3s both;
+    }
+    .nx-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--border-glass-hover);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 30px rgba(124, 58, 237, 0.05);
+    }
+
+    /* === SECTION TITLES === */
+    .section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.4rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+    .section-title svg {
+        color: var(--accent-light);
+        flex-shrink: 0;
+    }
+
+    /* === METRIC ROWS === */
+    .metric-row {
+        margin-bottom: 1.4rem;
+    }
+    .metric-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        align-items: baseline;
+    }
+    .metric-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.92rem;
+    }
+    .metric-val {
+        font-weight: 800;
+        font-size: 0.95rem;
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .progress-track {
+        height: 7px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #7c3aed, #818cf8, #4f46e5);
+        background-size: 200% 100%;
+        border-radius: 10px;
+        box-shadow: 0 0 14px var(--accent-glow);
+        animation: progressGrow 1.5s ease-out forwards, shimmer 3s ease-in-out infinite;
+    }
+
+    /* === INSIGHT CARDS === */
+    .insight-card {
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0.02));
+        border-left: 3px solid var(--accent);
+        padding: 1.4rem 1.5rem;
+        border-radius: 0 16px 16px 0;
+        margin-bottom: 1rem;
+        transition: background 0.3s, transform 0.3s;
+    }
+    .insight-card:hover {
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(124, 58, 237, 0.04));
+        transform: translateX(4px);
+    }
+    .insight-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--accent-light);
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    /* === QUESTION BLOCKS === */
+    .question-block {
+        background: linear-gradient(145deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+        border: 1px solid var(--border-glass);
+        border-radius: 18px;
+        padding: 1.8rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    .question-block::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 3px; height: 100%;
+        background: linear-gradient(180deg, var(--accent), transparent);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .question-block:hover {
+        transform: translateY(-5px);
+        background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+        border-color: var(--border-glass-hover);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+    }
+    .question-block:hover::before {
+        opacity: 1;
+    }
+
+    /* === TAGS === */
+    .tag-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 1.2rem;
+    }
+    .tag {
+        font-size: 0.73rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.04);
+        padding: 5px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-glass);
+        color: var(--text-secondary);
+        transition: all 0.25s;
+        letter-spacing: 0.02em;
+    }
+    .tag:hover {
+        background: rgba(124, 58, 237, 0.1);
+        border-color: rgba(124, 58, 237, 0.3);
+        color: var(--accent-light);
+    }
+
+    /* === BUTTONS === */
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 3rem;
+        animation: fadeInUp 0.8s ease-out 0.5s both;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 992px) {
+        .report-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+        .report-hero { padding: 2rem 1.2rem; border-radius: 18px; }
+        .score-circle-wrap { width: 140px; height: 140px; }
+        .score-number { font-size: 2.4rem; }
+        .nx-card { padding: 1.4rem; border-radius: 16px; }
+        .question-block { padding: 1.2rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container nx-portal-practice">
+    <div class="report-hero">
+        <div class="score-circle-wrap">
+            <svg class="score-circle-svg" viewBox="0 0 160 160">
+                <defs>
+                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#7c3aed" />
+                        <stop offset="100%" stop-color="#4f46e5" />
+                    </linearGradient>
+                </defs>
+                <circle class="score-circle-bg" cx="80" cy="80" r="70" />
+                <circle class="score-circle-progress" cx="80" cy="80" r="70" />
+            </svg>
+            <div class="score-text">
+                <span class="score-number">{{ profile.overall_performance }}</span>
+                <span class="score-label">Overall Score</span>
+            </div>
+        </div>
+
+        <div class="score-circle-wrap" style="width: 120px; height: 120px; margin-left: -30px; opacity: 0.8;">
+            <svg class="score-circle-svg" viewBox="0 0 160 160">
+                <circle class="score-circle-bg" cx="80" cy="80" r="70" />
+                <circle class="score-circle-progress" cx="80" cy="80" r="70" style="stroke: #10b981; stroke-dasharray: {{ (profile.avg_score * 4.4) }} 440;" />
+            </svg>
+            <div class="score-text">
+                <span class="score-number" style="font-size: 1.5rem;">{{ profile.avg_score }}</span>
+                <span class="score-label" style="font-size: 0.6rem;">Avg Relevance</span>
+            </div>
+        </div>
+
+        <h1 class="nx-hero-title" style="font-size: 2.5rem; margin-bottom: 0.5rem;">Evaluation for {{ user.name }}</h1>
+        <div class="archetype-badge">
+            <span class="nx-logo-mark" style="background: var(--accent); width: 12px; height: 12px;"></span>
+            Archetype: {{ profile.primary_color }}
+        </div>
+    </div>
+
+    {% if malpractice %}
+    <div class="insight-card" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.1); margin-bottom: 2rem;">
+        <span class="insight-label" style="color: #ef4444;">Proctoring Alert</span>
+        <p style="margin: 0; color: #fca5a5; font-weight: 600;">Multiple distractions or suspicious behavior was detected during this session. This report has been flagged for manual review.</p>
+    </div>
+    {% endif %}
+
+    <div class="report-grid">
+        <div class="nx-card">
+            <h3 class="section-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                AI Personality Analysis
+            </h3>
+            
+            <div class="insight-card">
+                <span class="insight-label">Behavioral Insight</span>
+                <p style="margin: 0; line-height: 1.6; color: #cbd5e1;">{{ profile.description | safe }}</p>
+            </div>
+
+            <div class="insight-card" style="border-color: #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);">
+                <span class="insight-label" style="color: #10b981;">Grow Tip</span>
+                <p style="margin: 0; line-height: 1.6; color: #cbd5e1;">{{ profile.suggestion | safe }}</p>
+            </div>
+        </div>
+
+        <div class="nx-card">
+            <h3 class="section-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                Core Competencies
+            </h3>
+            
+            {% for key, value in behavioral_metrics.items() %}
+            <div class="metric-row">
+                <div class="metric-info">
+                    <span class="metric-name">{{ key | capitalize }}</span>
+                    <span class="metric-val">{{ value }}%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ value }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-glass);">
+                <h4 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">Emotion Breakdown</h4>
+                <div style="height: 200px;">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nx-card">
+        <h3 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Detailed Interview Transcript
+        </h3>
+
+        {% for q in question_details %}
+        <div class="question-block">
+            <h4 style="color: #fff; margin: 0 0 0.5rem 0;">Q: {{ q.question }}</h4>
+            <p style="color: #94a3b8; font-style: italic; margin-bottom: 0.5rem; border-left: 2px solid var(--border-glass); padding-left: 1rem;">
+                "{{ q.answer }}"
+            </p>
+            {% if q.expected_point %}
+            <div style="background: rgba(124, 58, 237, 0.1); border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1rem; border: 1px dashed rgba(124, 58, 237, 0.3);">
+                <span style="color: #a78bfa; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.2rem;">AI Key Expected Point</span>
+                <p style="color: #e2e8f0; margin: 0; font-size: 0.95rem;">{{ q.expected_point }}</p>
+            </div>
+            {% endif %}
+            <div class="tag-grid">
+                <div class="tag">Relevance: {{ q.relevance }}%</div>
+                <div class="tag">Tone: {{ q.audio_tone }}</div>
+                <div class="tag">Speed: {{ q.wpm }} WPM</div>
+                <div class="tag">Focus: {{ q.focus_score }}%</div>
+                {% if q.get('filler_breakdown') %}
+                    {% for word, count in q.filler_breakdown.items() %}
+                        <div class="tag" style="color: #f472b6;">"{{ word }}": {{ count }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="btn-group">
+        <a href="{{ url_for('download_report') }}" class="nx-btn nx-btn--primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+        </a>
+        <a href="{{ url_for('welcome') }}" class="nx-btn nx-btn--secondary">Finish Session</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('emotionChart').getContext('2d');
+        const emotionData = {{ overall_emotion_percentages | tojson | safe }};
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(emotionData).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                datasets: [{
+                    data: Object.values(emotionData),
+                    backgroundColor: [
+                        '#10b981', // happy
+                        '#ef4444', // angry
+                        '#3b82f6', // sad
+                        '#64748b', // neutral
+                        '#f59e0b', // surprise
+                        '#8b5cf6'  // fear
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

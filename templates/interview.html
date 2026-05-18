@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Session</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* --- 1. Instruction Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 12px;
+            max-width: 500px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal-content h2 { color: #d97706; margin-top: 0; }
+        .modal-list { text-align: left; margin: 20px 0; color: #333; font-size: 0.95rem; }
+        .modal-list li { margin-bottom: 10px; }
+        
+        /* --- 2. Floating Camera Box (Top Right) --- */
+        .camera-box {
+            position: fixed; 
+            top: 90px; 
+            right: 20px; 
+            width: 240px; 
+            height: 180px; 
+            border: 5px solid #ccc; /* Default Gray */
+            border-radius: 12px; 
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* DYNAMIC STATUS COLORS */
+        .camera-box.focused {
+            border-color: #22c55e; /* Green */
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+        }
+        .camera-box.distracted {
+            border-color: #ef4444; /* Red */
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+        }
+        
+        video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            display: block; 
+            transform: scaleX(-1); /* Mirror effect */
+        }
+        
+        #vision-canvas { display: none; }
+
+        /* --- 3. Main Layout --- */
+        .container {
+            max-width: 800px;
+            margin: 80px auto 0 auto; 
+            text-align: center;
+        }
+
+        /* --- 4. Timers & Alerts --- */
+        #distraction-alert {
+            display: none;
+            background-color: #ef4444; color: white;
+            padding: 15px; border-radius: 8px;
+            margin-bottom: 20px; font-weight: bold; font-size: 1.1rem;
+            animation: pulse-red 1s infinite;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Timer Badge */
+        .timer-badge {
+            display: inline-block;
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border: 2px solid #cbd5e1;
+        }
+        .timer-badge.active { background: #4f46e5; color: white; border-color: #4338ca; }
+        .timer-badge.editing { background: #10b981; color: white; border-color: #059669; }
+        .timer-badge.warning { background: #f59e0b; }
+        .timer-badge.danger { background: #ef4444; animation: pulse-red 0.5s infinite; }
+
+        /* --- 5. TRANSCRIPT BOX --- */
+        .transcript-box {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            margin-top: 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+            background: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+        .transcript-box.enabled {
+            background: white;
+            color: #1e293b;
+            cursor: text;
+        }
+        .transcript-box:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        /* --- 6. COUNTDOWN OVERLAY --- */
+        #countdown-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 5000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #countdown-number {
+            font-size: 120px;
+            font-weight: 900;
+            color: white;
+            animation: pop 1s ease-in-out infinite;
+        }
+        #countdown-label {
+            font-size: 1.4rem;
+            color: #e2e8f0;
+            margin-top: 10px;
+        }
+        @keyframes pop {
+            0%   { transform: scale(0.8); opacity: 0.5; }
+            50%  { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); }
+        }
+
+        /* AI Thinking Animation */
+        .thinking-indicator {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+            color: #7c3aed;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .dot-pulse {
+            position: relative;
+            width: 8px; height: 8px;
+            border-radius: 5px;
+            background-color: #7c3aed;
+            animation: dot-pulse 1.5s infinite linear;
+        }
+        @keyframes dot-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            .camera-box {
+                width: 120px;
+                height: 90px;
+                top: 80px;
+                right: 10px;
+            }
+            .container {
+                margin-top: 110px;
+            }
+        }
+    </style>
+</head>
+<body class="interview-app">
+    <!-- Ultra UI Navigation Bar -->
+    <nav class="navbar">
+        <a href="/" class="nav-brand">Persona Nexus</a>
+        <div class="nav-links">
+            <a href="/" class="nav-item">Home</a>
+            <a href="/practice" class="nav-item">Practice</a>
+            <a href="/company/dashboard" class="nav-item">Company</a>
+            <a href="/interview/access" class="nav-item">Interview access</a>
+            <a href="/about" class="nav-item">About</a>
+            <a href="/support" class="nav-item">Support</a>
+        </div>
+    </nav>
+
+    <script id="questions-data" type="application/json">
+        {{ questions | tojson | safe }}
+    </script>
+
+    <div id="instructionModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>⚠️ Interview Rules</h2>
+            <ul class="modal-list">
+                <li><strong>Countdown:</strong> 7 seconds to prepare, then recording starts automatically.</li>
+                <li><strong>Speak Time:</strong> 30 seconds to record your answer.</li>
+                <li><strong>Edit Time:</strong> 30 seconds to fix the text after recording.</li>
+                <li><strong>Focus:</strong> Camera turns <strong>RED</strong> if you look away.</li>
+                <li><strong>Disqualification:</strong> 10s of distraction terminates the interview.</li>
+                <li><strong>Proctoring:</strong> Leaving the tab or pasting text is strictly prohibited.</li>
+            </ul>
+            <button id="agreeBtn" class="btn">I Agree & Start</button>
+        </div>
+    </div>
+
+    <div id="camBox" class="camera-box">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="vision-canvas"></canvas>
+    </div>
+
+    <!-- Countdown Overlay -->
+    <div id="countdown-overlay">
+        <div id="countdown-number">7</div>
+        <div id="countdown-label">Get ready to answer...</div>
+    </div>
+
+    <!-- Ultra UI Popup for Disqualification -->
+    <div id="ultra-disqualify-popup" class="ultra-popup-overlay" style="display: none;">
+        <div class="ultra-popup-box" style="border-color: rgba(239, 68, 68, 0.5);">
+            <div class="ultra-popup-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444;">🚫</div>
+            <h3 style="color: #ef4444;">Interview Terminated</h3>
+            <p>Cumulative distraction exceeded 10s. You have been disqualified.</p>
+            <button id="disqualifyOkBtn" class="ultra-popup-btn" style="background: linear-gradient(to right, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);">OK</button>
+        </div>
+    </div>
+
+    <!-- Time Expired Popup -->
+    <div id="time-expired-popup" class="ultra-popup-overlay" style="display: none;">
+        <div class="ultra-popup-box" style="border-color: rgba(239, 68, 68, 0.5);">
+            <div class="ultra-popup-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444;">⏰</div>
+            <h3 style="color: #ef4444;">Time's Up!</h3>
+            <p>Your interview time has expired. Thank you for participating.</p>
+            <button id="timeExpiredOkBtn" class="ultra-popup-btn" style="background: linear-gradient(to right, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);">OK</button>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <h1 style="margin-bottom: 5px;">AI Interview</h1>
+        
+        <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <span id="q-progress" style="color: #64748b; font-weight: bold;">Question 1 of ...</span>
+                <div style="background:#e2e8f0; height:10px; border-radius:5px; margin-top:8px; width:100%; max-width:600px;">
+                    <div id="progress-fill" style="background:#4f46e5; height:100%; width:0%; border-radius:5px; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div id="global-interview-timer" class="timer-badge" style="background: #4f46e5; color: white;">
+                ⏱️ <span id="global-timer-text">Time Remaining</span>
+            </div>
+        </div>
+
+        <div id="answer-timer-display" class="timer-badge">⏱️ Ready</div>
+
+        <div id="distraction-alert">
+            ⚠️ LOOK AT SCREEN! Disqualification in <span id="skip-timer">10</span>s
+        </div>
+
+        <div class="report-section" style="padding: 30px; margin-bottom: 20px; border-left: 5px solid #4f46e5;">
+            <h2 id="question-text" style="margin: 0; color: #1e293b; font-size: 1.5rem;">Loading...</h2>
+            <div id="thinking-indicator" class="thinking-indicator">
+                <div class="dot-pulse"></div>
+                <span>AI is analyzing your response and crafting the next question...</span>
+            </div>
+            <button id="playAudioBtn" class="btn secondary-btn" style="margin-top: 15px; padding: 8px 16px; font-size: 0.95rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                🔊 Listen to Question
+            </button>
+        </div>
+
+        <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <label for="transcriptArea" style="font-weight: bold; color: #475569;">Your Answer (Auto-generated):</label>
+            <textarea id="transcriptArea" class="transcript-box" placeholder="Recording will start after countdown..." disabled></textarea>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button id="recordBtn" class="btn" style="font-size: 1.2rem; padding: 15px 40px;">Start Answering</button>
+            <button id="nextBtn" class="btn secondary-btn" style="display:none; margin-left: 10px;">Submit Answer</button>
+            <p id="status-text" style="color: #64748b; margin-top: 15px; font-size: 1rem;">Waiting to start...</p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- UI CORE (Non-module for resilience) ---
+        function closeModal() {
+            console.log("Agree button clicked. Closing modal...");
+            const modal = document.getElementById('instructionModal');
+            if (modal) modal.style.display = 'none';
+            window.interviewStarted = true;
+            if (typeof updateGlobalTimerDisplay === 'function') updateGlobalTimerDisplay();
+            if (window.globalTimeLimit && typeof startGlobalTimer === 'function') {
+                startGlobalTimer();
+            }
+            if (typeof initCamera === 'function') initCamera(); 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const agreeBtn = document.getElementById('agreeBtn');
+            if (agreeBtn) agreeBtn.onclick = closeModal;
+        });
+    </script>
+
+    <script type="module">
+        import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/vision_bundle.js";
+
+        // Expose functions to global scope for the resilient UI script
+        window.initCamera = initCamera;
+        window.startGlobalTimer = startGlobalTimer;
+        window.updateGlobalTimerDisplay = updateGlobalTimerDisplay;
+
+        // --- 1. CONFIGURATION ---
+        const IS_DYNAMIC = {{ 'true' if is_dynamic else 'false' }};
+        let interviewQuestions = [];
+        try {
+            interviewQuestions = JSON.parse(document.getElementById('questions-data').textContent);
+        } catch(e) {
+            console.error("JSON Error", e);
+            interviewQuestions = ["Error loading questions."];
+        }
+        
+        let currentQIndex = 0;
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let isEditing = false;
+        
+        // Define interviewStarted locally and expose it
+        let interviewStarted = false;
+        window.interviewStarted = interviewStarted;
+        
+        let stream;
+        
+        let recognition = null;
+        let recognitionActive = false;
+
+        // Timers
+        const MINUTES_PER_QUESTION = {{ minutes_per_question if minutes_per_question else 0 }};
+        const DURATION_MINUTES = {{ duration_minutes if duration_minutes else 0 }};
+        let ANSWER_TIME_LIMIT = MINUTES_PER_QUESTION ? (MINUTES_PER_QUESTION * 60) : 30; 
+        let EDIT_TIME_LIMIT = MINUTES_PER_QUESTION ? (MINUTES_PER_QUESTION * 60) : 30; 
+        const DISTRACTION_LIMIT = 10; 
+        
+        let timerInterval = null;
+        let timeLeft = 0;
+        
+        // Global Interview Timer
+        const NUM_QUESTIONS = {{ num_questions if num_questions else 0 }} || interviewQuestions.length;
+        window.globalTimeLimit = DURATION_MINUTES ? (DURATION_MINUTES * 60) : (MINUTES_PER_QUESTION ? (MINUTES_PER_QUESTION * NUM_QUESTIONS * 60) : null);
+        let globalTimeElapsed = 0;
+        let globalTimerInterval = null;
+        
+        // AI Variables
+        let faceLandmarker = null;
+        let lastVideoTime = -1;
+        let distractionTime = 0; // Cumulative Distraction
+
+        // --- LISTENERS ---
+        document.getElementById('recordBtn').addEventListener('click', toggleRecording);
+        document.getElementById('nextBtn').addEventListener('click', confirmAndNext);
+        document.getElementById('playAudioBtn').addEventListener('click', playQuestionAudio);
+
+        // --- ANTI-CHEATING / PROCTORING LISTENERS ---
+        let blurInterval = null;
+
+        function handleTabSwitch() {
+            if (window.interviewStarted && !blurInterval) {
+                blurInterval = setInterval(() => {
+                    distractionTime += 1;
+                    const alertBox = document.getElementById('distraction-alert');
+                    const camBox = document.getElementById('camBox');
+                    alertBox.style.display = "block";
+                    alertBox.innerHTML = `⚠️ TAB SWITCH DETECTED! Return immediately. Disqualification in ${Math.ceil(Math.max(0, DISTRACTION_LIMIT - distractionTime))}s`;
+                    camBox.classList.remove('focused');
+                    camBox.classList.add('distracted');
+                    
+                    if (distractionTime >= DISTRACTION_LIMIT) {
+                        clearInterval(blurInterval);
+                        forceSkipQuestion();
+                    }
+                }, 1000);
+            }
+        }
+
+        function handleFocus() {
+            if (blurInterval) {
+                clearInterval(blurInterval);
+                blurInterval = null;
+            }
+        }
+
+        window.addEventListener("blur", handleTabSwitch);
+        window.addEventListener("focus", handleFocus);
+        document.addEventListener("visibilitychange", () => { 
+            if (document.hidden) handleTabSwitch(); 
+            else handleFocus();
+        });
+
+        document.getElementById('transcriptArea').addEventListener('paste', (e) => {
+            e.preventDefault();
+            alert("⚠️ Pasting is disabled to ensure original answers.");
+        });
+
+        function startGlobalTimer() {
+            if (globalTimerInterval) clearInterval(globalTimerInterval);
+            globalTimerInterval = setInterval(() => {
+                globalTimeElapsed++;
+                updateGlobalTimerDisplay();
+                
+                if (window.globalTimeLimit && globalTimeElapsed >= window.globalTimeLimit) {
+                    clearInterval(globalTimerInterval);
+                    stopCamera();
+                    endInterviewDueToTime();
+                }
+            }, 1000);
+        }
+
+        function updateGlobalTimerDisplay() {
+            const timerEl = document.getElementById('global-timer-text');
+            if (!window.globalTimeLimit) {
+                timerEl.innerText = 'No time limit';
+                return;
+            }
+            
+            const timeRemaining = window.globalTimeLimit - globalTimeElapsed;
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            
+            timerEl.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            const badge = document.getElementById('global-interview-timer');
+            if (timeRemaining <= 60) {
+                badge.style.background = '#ef4444';
+            } else if (timeRemaining <= 300) {
+                badge.style.background = '#f59e0b';
+            } else {
+                badge.style.background = '#4f46e5';
+            }
+        }
+
+        function endInterviewDueToTime() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (globalTimerInterval) clearInterval(globalTimerInterval);
+            
+            document.getElementById('time-expired-popup').style.display = 'flex';
+            document.getElementById('timeExpiredOkBtn').onclick = () => {
+                finishInterview();
+            };
+        }
+
+        async function initCamera() {
+            const statusText = document.getElementById('status-text');
+            try {
+                statusText.innerText = "Requesting Camera...";
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('video').srcObject = stream;
+                
+                statusText.innerText = "Loading AI...";
+                await loadFaceLandmarker();
+                
+                statusText.innerText = "Ready.";
+                updateQuestionUI();
+                predictWebcam(); 
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        }
+
+        async function loadFaceLandmarker() {
+            try {
+                const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
+                faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+                    baseOptions: { modelAssetPath: "/static/face_landmarker.task", delegate: "GPU" },
+                    outputFaceBlendshapes: true,
+                    runningMode: "VIDEO",
+                    numFaces: 1,
+                    outputFacialTransformationMatrixes: false,
+                    minFaceDetectionConfidence: 0.5,
+                    minFacePresenceConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+            } catch (e) { throw new Error("Check face_landmarker.task in static folder."); }
+        }
+
+        async function predictWebcam() {
+            if (!stream) return; 
+            const video = document.getElementById('video');
+            if (faceLandmarker && video.currentTime !== lastVideoTime) {
+                lastVideoTime = video.currentTime;
+                if (video.videoWidth > 0 && !video.paused && !video.ended) {
+                    const results = faceLandmarker.detectForVideo(video, performance.now());
+                    checkDistraction(results);
+                }
+            }
+            window.requestAnimationFrame(predictWebcam);
+        }
+
+        // --- 3. DISTRACTION LOGIC — HEAD POSE ONLY (reliable) ---
+        function checkDistraction(results) {
+            const camBox = document.getElementById('camBox');
+
+            if (!window.interviewStarted) {
+                document.getElementById('distraction-alert').style.display = "none";
+                camBox.className = "camera-box";
+                return;
+            }
+
+            const alertBox = document.getElementById('distraction-alert');
+            let isBad = false;
+            let reason = "";
+
+            if (!results.faceLandmarks || results.faceLandmarks.length === 0) {
+                isBad = true;
+                reason = "No face detected";
+            } else {
+                const lm = results.faceLandmarks[0];
+
+                // Use nose tip (1), left ear (234), right ear (454)
+                // These give a reliable head turn signal
+                const nose      = lm[1];
+                const leftEar   = lm[234];
+                const rightEar  = lm[454];
+                const forehead  = lm[10];
+                const chin      = lm[152];
+
+                const faceWidth  = Math.abs(rightEar.x - leftEar.x);
+                const faceCenterX = (leftEar.x + rightEar.x) / 2;
+                const faceHeight = Math.abs(chin.y - forehead.y);
+
+                // ── LEFT / RIGHT head turn ────────────────────────────────
+                // Nose should be near center of face width
+                // When turning right: nose moves toward right ear (ratio > 0.65)
+                // When turning left:  nose moves toward left ear  (ratio < 0.35)
+                const noseRatioX = faceWidth > 0
+                    ? (nose.x - leftEar.x) / faceWidth
+                    : 0.5;
+
+                if (noseRatioX < 0.30) {
+                    isBad = true;
+                    reason = "Looking left";
+                } else if (noseRatioX > 0.70) {
+                    isBad = true;
+                    reason = "Looking right";
+                }
+
+                // ── UP / DOWN head tilt ───────────────────────────────────
+                // Nose Y relative to forehead-chin distance
+                // Straight ahead: nose sits ~40–70% down the face
+                const noseRatioY = faceHeight > 0
+                    ? (nose.y - forehead.y) / faceHeight
+                    : 0.5;
+
+                if (!isBad && noseRatioY < 0.25) {
+                    isBad = true;
+                    reason = "Looking up";
+                } else if (!isBad && noseRatioY > 0.62) {
+                    isBad = true;
+                    reason = "Looking down";
+                }
+
+                // ── FACE TOO FAR / HIDDEN ─────────────────────────────────
+                if (!isBad && faceWidth < 0.08) {
+                    isBad = true;
+                    reason = "Move closer to camera";
+                }
+            }
+
+            if (isBad) {
+                distractionTime += 0.05;
+                camBox.classList.remove('focused');
+                camBox.classList.add('distracted');
+                alertBox.style.display = "block";
+                alertBox.innerHTML = `⚠️ ${reason} — LOOK AT CAMERA! Disqualification in ${Math.ceil(Math.max(0, DISTRACTION_LIMIT - distractionTime))}s`;
+                if (distractionTime >= DISTRACTION_LIMIT) {
+                    forceSkipQuestion();
+                }
+            } else {
+                distractionTime = Math.max(0, distractionTime - 0.02);
+                camBox.classList.remove('distracted');
+                camBox.classList.add('focused');
+                alertBox.style.display = "none";
+            }
+        }
+
+        function forceSkipQuestion() {
+            stopCamera();
+            document.getElementById('ultra-disqualify-popup').style.display = 'flex';
+            document.getElementById('disqualifyOkBtn').onclick = () => {
+                window.location.href = "/disqualify";
+            };
+            // Auto-redirect to the disqualified page after 5 seconds if they ignore the popup
+            setTimeout(() => { window.location.href = "/disqualify"; }, 5000);
+        }
+
+        // --- AUDIO PLAYBACK (Text to Speech) ---
+        function playQuestionAudio() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop any ongoing speech
+                const text = document.getElementById('question-text').innerText;
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Text-to-speech is not supported in this browser.");
+            }
+        }
+
+        // --- 4. RECORDING ---
+        function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+            if (!isRecording) {
+                // Hide button during countdown
+                btn.style.display = "none";
+                document.getElementById('status-text').innerText = "Get ready...";
+                startCountdown(7, () => {
+                    beginRecording();
+                });
+            } else {
+                stopRecordingLogic(false);
+            }
+        }
+
+        function startCountdown(seconds, callback) {
+            // Stop reading the question if they start the countdown
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            
+            const overlay = document.getElementById('countdown-overlay');
+            const numEl   = document.getElementById('countdown-number');
+            const lblEl   = document.getElementById('countdown-label');
+            overlay.style.display = "flex";
+            numEl.innerText = seconds;
+
+            let remaining = seconds;
+            const cd = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(cd);
+                    overlay.style.display = "none";
+                    callback();
+                } else {
+                    numEl.innerText = remaining;
+                    if (remaining <= 3) lblEl.innerText = "Almost...";
+                }
+            }, 1000);
+        }
+
+        function beginRecording() {
+            const btn      = document.getElementById('recordBtn');
+            const textArea = document.getElementById('transcriptArea');
+
+            isRecording   = true;
+            isEditing     = false;
+            document.getElementById('distraction-alert').style.display = "none";
+
+            // Textarea stays DISABLED during recording
+            textArea.value       = "";
+            textArea.disabled    = true;
+            textArea.classList.remove("enabled");
+            textArea.placeholder = "🎙️ Listening... transcription will appear after recording.";
+
+            // Start recording timer
+            startTimer(ANSWER_TIME_LIMIT, "Recording", () => {
+                stopRecordingLogic(false);
+            });
+
+            // Start audio/video recording
+            audioChunks   = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.start();
+
+            btn.innerText = "Stop Recording";
+            btn.classList.add("recording");
+            btn.style.display = "inline-block";
+            document.getElementById('status-text').innerText = "🎙️ Recording... Speak clearly.";
+            document.getElementById('nextBtn').style.display = "none";
+        }
+
+        // Send recorded audio to Whisper on the server and get transcript
+        async function transcribeWithWhisper(audioBlob) {
+            const textArea = document.getElementById('transcriptArea');
+            textArea.placeholder = "⏳ Transcribing with Whisper AI...";
+
+            try {
+                const formData = new FormData();
+                formData.append('audio_data', audioBlob, 'audio.webm');
+
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Server error');
+
+                const data = await response.json();
+                const transcript = (data.transcript || "").trim();
+
+                if (transcript && transcript !== "Error") {
+                    textArea.value = transcript;
+                } else {
+                    textArea.value = "";
+                    textArea.placeholder = "Could not transcribe. Please type your answer.";
+                }
+            } catch (err) {
+                console.error("Whisper transcription failed:", err);
+                textArea.value = "";
+                textArea.placeholder = "Transcription failed. Please type your answer.";
+            }
+        }
+
+        function stopRecordingLogic(skipEdit) {
+            isRecording       = false;
+            recognitionActive = false;
+            document.getElementById('camBox').className = "camera-box";
+
+            if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+            clearInterval(timerInterval);
+
+            const btn = document.getElementById('recordBtn');
+            btn.innerText = "Start Answering";
+            btn.classList.remove("recording");
+            btn.style.display = "none";
+
+            const textArea = document.getElementById('transcriptArea');
+
+            if (skipEdit) {
+                // Force skip — no transcription needed
+                textArea.disabled = true;
+                textArea.classList.remove("enabled");
+                saveDataAndContinue();
+                return;
+            }
+
+            // Wait for mediaRecorder to flush all data, then transcribe
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'video/webm' });
+
+                // Show transcribing status
+                document.getElementById('status-text').innerText = "⏳ Transcribing your answer...";
+                document.getElementById('answer-timer-display').innerText = "Processing...";
+
+                // Send to Whisper
+                await transcribeWithWhisper(audioBlob);
+
+                // Now open edit phase
+                startEditPhase();
+            };
+        }
+
+        // --- 5. EDITING PHASE ---
+        function startEditPhase() {
+            isEditing = true;
+
+            // Enable textarea for editing
+            const textArea = document.getElementById('transcriptArea');
+            textArea.disabled = false;
+            textArea.classList.add("enabled");
+            textArea.placeholder = "Edit your answer here...";
+
+            document.getElementById('nextBtn').style.display = "inline-block";
+            document.getElementById('status-text').innerText = "Edit your text now. Auto-submit in 30s.";
+            
+            startTimer(EDIT_TIME_LIMIT, "Editing", () => {
+                confirmAndNext();
+            });
+        }
+
+        function startTimer(seconds, mode, callback) {
+            timeLeft = seconds;
+            const display = document.getElementById('answer-timer-display');
+            updateTimerUI(display, mode);
+            
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI(display, mode);
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    callback();
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI(el, mode) {
+            el.innerText = `${mode}: ${timeLeft}s`;
+            el.className = "timer-badge";
+            if (mode === "Recording") el.classList.add("active");
+            if (mode === "Editing") el.classList.add("editing");
+            
+            if (timeLeft <= 10) el.classList.add("warning");
+            if (timeLeft <= 5) el.classList.add("danger");
+        }
+
+        // --- 6. SUBMIT ---
+        function confirmAndNext() {
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('answer-timer-display').className = "timer-badge";
+            document.getElementById('answer-timer-display').innerText = "Processing...";
+            saveDataAndContinue();
+        }
+
+        function saveDataAndContinue() {
+            // audioChunks already collected during recording
+            const blob = new Blob(audioChunks, { type: 'video/webm' });
+            const finalTranscript = document.getElementById('transcriptArea').value;
+
+            if (!window.allAnswers) window.allAnswers = [];
+            window.allAnswers.push({ 
+                index: currentQIndex, 
+                blob: blob,
+                text: finalTranscript 
+            });
+
+            if (currentQIndex < NUM_QUESTIONS - 1) {
+                if (IS_DYNAMIC) {
+                    document.getElementById('status-text').innerText = "AI is thinking...";
+                    document.getElementById('answer-timer-display').innerText = "Processing...";
+                    document.getElementById('thinking-indicator').style.display = "flex";
+                    document.getElementById('question-text').style.opacity = "0.3";
+                    
+                    fetch('/api/next_question', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            previous_answer: finalTranscript,
+                            question_index: currentQIndex + 1
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('thinking-indicator').style.display = "none";
+                        document.getElementById('question-text').style.opacity = "1";
+                        interviewQuestions.push(data.question);
+                        currentQIndex++;
+                        updateQuestionUI();
+                        resetUIForNextQuestion();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        document.getElementById('thinking-indicator').style.display = "none";
+                        document.getElementById('question-text').style.opacity = "1";
+                        interviewQuestions.push("Could you elaborate more on your previous experiences?");
+                        currentQIndex++;
+                        updateQuestionUI();
+                        resetUIForNextQuestion();
+                    });
+                } else {
+                    currentQIndex++;
+                    updateQuestionUI();
+                    resetUIForNextQuestion();
+                }
+            } else {
+                finishInterview();
+            }
+        }
+        
+        function resetUIForNextQuestion() {
+            document.getElementById('recordBtn').style.display = "inline-block";
+            document.getElementById('nextBtn').style.display = "none";
+            const textArea = document.getElementById('transcriptArea');
+            textArea.value = "";
+            textArea.disabled = true;
+            textArea.classList.remove("enabled");
+            textArea.placeholder = "Recording will start after countdown...";
+            document.getElementById('status-text').innerText = "Ready for next question.";
+            document.getElementById('answer-timer-display').innerText = "⏱️ Ready";
+        }
+
+        function updateQuestionUI() {
+            document.getElementById('question-text').innerText = interviewQuestions[currentQIndex];
+            document.getElementById('q-progress').innerText = `Question ${currentQIndex + 1} of ${NUM_QUESTIONS}`;
+            let pct = ((currentQIndex) / NUM_QUESTIONS) * 100;
+            document.getElementById('progress-fill').style.width = pct + "%";
+        }
+
+        async function finishInterview() {
+            interviewStarted = false;
+            stopCamera();
+            if (globalTimerInterval) clearInterval(globalTimerInterval);
+            document.querySelector('.container').innerHTML = `
+                <div style="text-align:center; padding: 60px 20px;">
+                    <h1 style="color:#4f46e5;">🧠 Analyzing Your Interview</h1>
+                    <p id="progress-msg" style="color:#64748b; font-size:1.1rem; margin: 20px 0;">Uploading responses...</p>
+                    <div style="background:#e2e8f0; border-radius:10px; height:20px; max-width:500px; margin:0 auto 20px auto; overflow:hidden;">
+                        <div id="progress-bar" style="background:#4f46e5; height:100%; width:0%; border-radius:10px; transition:width 0.5s;"></div>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.9rem;">This may take 1-3 minutes. Please don't close this tab.</p>
+                </div>
+            `;
+
+            const finalForm = new FormData();
+            const textAnswersList = [];
+
+            for (let i = 0; i < window.allAnswers.length; i++) {
+                finalForm.append(`video_blob_${i}`, window.allAnswers[i].blob);
+                textAnswersList.push(window.allAnswers[i].text);
+            }
+            finalForm.append('text_answers', JSON.stringify(textAnswersList));
+            
+            // Check if any cheating was detected during the session
+            const wasDistracted = distractionTime >= 5; // Soft threshold for flagging
+            finalForm.append('malpractice', wasDistracted ? 'true' : 'false');
+
+            const fetchWithRetry = async (url, options, maxRetries = 3) => {
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const res = await fetch(url, options);
+                        if (!res.ok) throw new Error("Server returned " + res.status);
+                        return res;
+                    } catch (err) {
+                        if (i === maxRetries - 1) throw err;
+                        const msgEl = document.getElementById('progress-msg');
+                        if (msgEl) msgEl.innerText = `Upload interrupted, retrying (${i+1}/${maxRetries})...`;
+                        await new Promise(r => setTimeout(r, 2000 * Math.pow(2, i)));
+                    }
+                }
+            };
+
+            fetchWithRetry('/report', { method: 'POST', body: finalForm }, 3)
+            .then(res => res.text())
+            .then(html => {
+                // The server now returns 'processing.html' which has its own polling logic
+                document.open(); 
+                document.write(html); 
+                document.close();
+            })
+            .catch(err => {
+                document.getElementById('progress-msg').innerText = "Critical error during upload. Please contact support.";
+                console.error(err);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+{% extends "layouts/base.html" %}
+{% block title %}Company portal{% endblock %}
+{% block body_class %}nx-portal-company{% endblock %}
+{% block content %}
+<div class="nx-card" style="max-width:640px;margin:0 auto;text-align:left;">
+  <h1 class="nx-hero-title" style="font-size:2rem;">Company portal</h1>
+  <p class="nx-lead">Create interviews, copy the <strong>access link</strong> or raw <strong>code</strong> for candidates. Only people with that key should open the company interview flow.</p>
+
+  <div id="msg-box" style="display:none;padding:12px;margin:1rem 0;border-radius:12px;font-weight:600;"></div>
+
+  <div id="authSection">
+    <form id="companyAuthForm" class="user-form" autocomplete="off" novalidate>
+      <h3 style="margin:0 0 1.2rem;">Recruiter sign in</h3>
+      <div class="form-group">
+        <label>Company name <span style="color:#475569;font-weight:400;">(signup only)</span></label>
+        <input type="text" id="c_name" placeholder="e.g. Acme Corp"
+          autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="form-group">
+        <label>Work email</label>
+        <input type="email" id="c_email" placeholder="recruiter@company.com"
+          autocomplete="new-password" autocorrect="off" autocapitalize="off" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="c_pass" placeholder="Your password"
+          autocomplete="new-password" required>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button type="button" id="loginBtn" class="btn nx-btn" style="flex:1;">Log in</button>
+        <button type="button" id="signupBtn" class="btn secondary-btn" style="flex:1;">Register</button>
+      </div>
+      <div id="otp_group" style="display:none; margin-top:1.2rem;">
+        <div class="form-group">
+          <label>Enter OTP from Email</label>
+          <input type="text" id="c_otp" placeholder="123456" autocomplete="off">
+        </div>
+        <button type="button" id="verifyOtpBtn" class="btn nx-btn" style="width:100%;">Verify OTP</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="dashboardSection" style="display:none;">
+    <h3 style="margin-top:0;">New interview</h3>
+    <form id="createInterviewForm" class="user-form">
+      <div class="form-group"><label>Interview title</label><input type="text" id="inv_title" placeholder="e.g. Backend screen — round 1"></div>
+      <div class="form-group"><label>Candidate email (optional)</label><input type="email" id="cand_email" placeholder="candidate@email.com"></div>
+      <div class="form-group">
+        <label style="display:flex; justify-content:space-between;">Start Time <span style="font-weight:400; color:var(--nx-muted);">(optional)</span></label>
+        <input type="datetime-local" id="start_time">
+      </div>
+      <div class="form-group">
+        <label style="display:flex; justify-content:space-between;">End Time <span style="font-weight:400; color:var(--nx-muted);">(optional)</span></label>
+        <input type="datetime-local" id="end_time">
+      </div>
+      <div class="form-group">
+        <label style="display:flex; justify-content:space-between;">Overall Duration (Minutes) <span style="font-weight:400; color:var(--nx-muted);">(optional)</span></label>
+        <input type="number" id="duration_minutes" placeholder="e.g. 60" min="1">
+      </div>
+      <div class="form-group">
+        <label>Questions (one per line)</label>
+        <textarea id="custom_qs" style="width:100%;min-height:120px;padding:14px;border-radius:12px;font-family:inherit;" placeholder="Why this role?&#10;Describe a hard bug you fixed."></textarea>
+      </div>
+      <button type="submit" class="btn nx-btn" style="width:100%;">Create &amp; get access links</button>
+    </form>
+
+    <div id="inviteLinkBox" style="display:none;margin-top:1.5rem;padding:1.25rem;border-radius:14px;border:1px dashed rgba(124,58,237,.5);background:rgba(124,58,237,.08);">
+      <p style="margin:0 0 .75rem;font-weight:600;">Send <u>one</u> of these to the candidate:</p>
+      <p style="font-size:.9rem;color:var(--nx-muted);margin:0 0 .5rem;">Full link (opens interview setup)</p>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span id="inviteTokenUrl" style="word-break:break-all;color:var(--nx-accent2);font-weight:600;flex:1;"></span>
+        <button type="button" class="btn secondary-btn" style="padding:4px 8px;font-size:0.8rem;" onclick="navigator.clipboard.writeText(document.getElementById('inviteTokenUrl').innerText); showMsg('Full link copied!');">Copy</button>
+      </div>
+      <p style="font-size:.9rem;color:var(--nx-muted);margin:1rem 0 .5rem;">Legacy UUID link (still works)</p>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span id="inviteLinkUrl" style="word-break:break-all;color:#c4b5fd;flex:1;"></span>
+        <button type="button" class="btn secondary-btn" style="padding:4px 8px;font-size:0.8rem;" onclick="navigator.clipboard.writeText(document.getElementById('inviteLinkUrl').innerText); showMsg('Legacy link copied!');">Copy</button>
+      </div>
+      <p style="margin-top:1rem;font-size:.85rem;color:var(--nx-muted);">They can also open <strong>Interview access</strong> in the top menu and paste the <strong>token</strong> segment from the first link.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+        let activeCompanyEmail = "";
+
+        function showMsg(msg, isError=false) {
+            console.log('showMsg called with:', msg, isError);
+            const box = document.getElementById('msg-box');
+            box.style.display = 'block';
+            box.style.backgroundColor = isError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+            box.style.color = isError ? '#fecaca' : '#a7f3d0';
+            box.innerText = msg;
+        }
+
+        async function handleAuth(endpoint) {
+            const name = document.getElementById('c_name').value;
+            const email = document.getElementById('c_email').value;
+            const pass = document.getElementById('c_pass').value;
+
+            console.log('=== handleAuth called ===');
+            console.log('Endpoint:', endpoint);
+            console.log('Name:', name, 'Email:', email, 'Pass:', pass ? '***' : '');
+
+            if (endpoint === '/company/verify_signup') {
+                const otp = document.getElementById('c_otp').value;
+                console.log('OTP verification mode, OTP:', otp);
+                const res = await fetch(endpoint, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ otp: otp })
+                });
+                const data = await res.json();
+                console.log('OTP verification response:', data, 'Status:', res.status);
+                if (res.ok) {
+                    showMsg("Registered successfully! Please log in.");
+                    document.getElementById('otp_group').style.display = 'none';
+                    document.getElementById('loginBtn').style.display = 'block';
+                    document.getElementById('signupBtn').style.display = 'block';
+                } else showMsg(data.error || "Verification failed", true);
+                return;
+            }
+
+            const res = await fetch(endpoint, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ company_name: name, email: email, password: pass })
+            });
+            const data = await res.json();
+            console.log('===Auth response===');
+            console.log('Endpoint:', endpoint);
+            console.log('Data:', data);
+            console.log('Status:', res.status);
+            console.log('require_otp:', data.require_otp);
+            
+            if(res.ok) {
+                if(endpoint.includes('login')) {
+                    console.log('Login flow');
+                    activeCompanyEmail = email;
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('dashboardSection').style.display = 'block';
+                    showMsg("Logged in. Create an interview below.");
+                } else {
+                    console.log('Signup flow');
+                    if (data.require_otp) {
+                        console.log('OTP required - showing OTP field');
+                        showMsg("OTP sent to your email. Please verify.", false);
+                        document.getElementById('otp_group').style.display = 'block';
+                        document.getElementById('loginBtn').style.display = 'none';
+                        document.getElementById('signupBtn').style.display = 'none';
+                    } else {
+                        console.log('No OTP - account created directly');
+                        showMsg("Registered — please log in.");
+                    }
+                }
+            } else {
+                console.log('Error response, showing error');
+                showMsg(data.error || "Authentication failed", true);
+            }
+        }
+
+        console.log('Script loaded - attaching event listeners');
+        document.getElementById('loginBtn').onclick = () => {
+            console.log('Login button clicked');
+            handleAuth('/company/login');
+        };
+        document.getElementById('signupBtn').onclick = () => {
+            console.log('Signup button clicked');
+            handleAuth('/company/signup');
+        };
+        document.getElementById('verifyOtpBtn').onclick = () => {
+            console.log('Verify OTP button clicked');
+            handleAuth('/company/verify_signup');
+        };
+
+        document.getElementById('createInterviewForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const qsText = document.getElementById('custom_qs').value;
+            const qsArray = qsText.split('\n').map(q => q.trim()).filter(q => q.length > 0);
+
+            const res = await fetch('/company/create_interview', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+                company_email: activeCompanyEmail,
+                custom_questions: qsArray,
+                title: document.getElementById('inv_title').value,
+                candidate_email: document.getElementById('cand_email').value,
+                start_time: document.getElementById('start_time').value,
+                end_time: document.getElementById('end_time').value,
+                duration_minutes: document.getElementById('duration_minutes').value ? parseInt(document.getElementById('duration_minutes').value) : null
+            }) });
+            const data = await res.json();
+            if(res.ok) {
+                document.getElementById('inviteLinkBox').style.display = 'block';
+                const base = window.location.origin;
+                document.getElementById('inviteLinkUrl').innerText = base + data.invite_link;
+                if (data.invite_link_token) {
+                    document.getElementById('inviteTokenUrl').innerText = base + data.invite_link_token;
+                }
+            } else showMsg(data.error || "Create failed", true);
+        };
+</script>
+{% endblock %}

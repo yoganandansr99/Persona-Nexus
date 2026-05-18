@@ -1,0 +1,157 @@
+{% extends "layouts/base.html" %}
+{% block title %}Home{% endblock %}
+{% block extra_css %}
+<style>
+  .home-wrap { max-width: 860px; margin: 0 auto; text-align: center; }
+
+  .home-badge {
+    display: inline-block;
+    padding: .35rem 1rem;
+    border-radius: 999px;
+    background: rgba(124,58,237,.15);
+    border: 1px solid rgba(124,58,237,.3);
+    color: #c4b5fd;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .home-alert {
+    margin: 1.2rem auto;
+    max-width: 500px;
+    padding: .85rem 1rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  .home-alert.error { background: rgba(251,113,133,.12); border: 1px solid rgba(251,113,133,.3); color: #fecdd3; }
+  .home-alert.success { background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.3); color: #a7f3d0; }
+
+  /* Portal cards */
+  .portal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin-top: 3rem;
+  }
+  @media (max-width: 720px) { .portal-grid { grid-template-columns: 1fr; } }
+
+  .portal-card {
+    background: rgba(12,18,36,.85);
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 20px;
+    padding: 2rem 1.5rem;
+    text-align: left;
+    backdrop-filter: blur(14px);
+    transition: border-color .25s, transform .25s;
+    text-decoration: none;
+    display: block;
+  }
+  .portal-card:hover {
+    border-color: rgba(124,58,237,.45);
+    transform: translateY(-4px);
+  }
+  .portal-card-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  .portal-card-title {
+    font-family: "Syne", sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #f1f5f9;
+    margin: 0 0 .5rem;
+    letter-spacing: -.01em;
+  }
+  .portal-card-desc {
+    font-size: .85rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0 0 1.2rem;
+  }
+  .portal-card-cta {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #7c3aed;
+    letter-spacing: .02em;
+  }
+  .portal-card:hover .portal-card-cta { color: #22d3ee; }
+
+  /* Interview access highlight */
+  .portal-card.accent {
+    border-color: rgba(34,211,238,.2);
+    background: rgba(34,211,238,.04);
+  }
+  .portal-card.accent:hover { border-color: rgba(34,211,238,.5); }
+  .portal-card.accent .portal-card-cta { color: #22d3ee; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-wrap">
+
+  <span class="home-badge">AI-Powered Interview Platform</span>
+
+  <h1 class="nx-hero-title">Persona Nexus</h1>
+  <p class="nx-lead" style="margin: 0 auto 1rem;">
+    One engine for practice mocks and company-run interviews.<br>
+    Multimodal AI analysis — emotion, speech, relevance, personality.
+  </p>
+
+  {% if error %}
+  <div class="home-alert error">{{ error }}</div>
+  {% endif %}
+  {% if success %}
+  <div class="home-alert success">{{ success }}</div>
+  {% endif %}
+
+  <div class="portal-grid">
+
+    {% if session.get('is_candidate') %}
+    <a class="portal-card accent" href="{{ url_for('interview_portal.interview_start') }}">
+      <span class="portal-card-icon">🎯</span>
+      <div class="portal-card-title">Continue your interview</div>
+      <p class="portal-card-desc">
+        You are cleared to start. Confirm your details and launch the AI-driven candidate assessment.
+      </p>
+      <span class="portal-card-cta">Start Interview →</span>
+    </a>
+    {% endif %}
+
+    <!-- Practice Portal -->
+    <a class="portal-card" href="{{ url_for('practice.practice_home') }}">
+      <span class="portal-card-icon">🎓</span>
+      <div class="portal-card-title">Practice Portal</div>
+      <p class="portal-card-desc">
+        Unlimited mock interviews with full AI feedback. Track your history, scores, and personality reports.
+      </p>
+      <span class="portal-card-cta">Enter Practice →</span>
+    </a>
+
+    <!-- Recruiter Portal -->
+    <a class="portal-card" href="{{ url_for('recruiter.recruiter_home') }}">
+      <span class="portal-card-icon">🏢</span>
+      <div class="portal-card-title">Recruiter Console</div>
+      <p class="portal-card-desc">
+        Create interviews, invite candidates by email, monitor results, and download reports.
+      </p>
+      <span class="portal-card-cta">Enter Recruiter →</span>
+    </a>
+
+    <!-- Interview Access -->
+    <a class="portal-card accent" href="{{ url_for('interview_portal.interview_access_gate') }}">
+      <span class="portal-card-icon">🔑</span>
+      <div class="portal-card-title">Interview Access</div>
+      <p class="portal-card-desc">
+        Candidate? Paste your access token or use the link your recruiter sent to start your interview.
+      </p>
+      <span class="portal-card-cta">Enter Interview →</span>
+    </a>
+
+  </div>
+
+</div>
+{% endblock %}
