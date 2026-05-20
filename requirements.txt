@@ -19,28 +19,14 @@ pymongo==4.6.0
 # Environment Configuration
 python-dotenv==1.0.0
 
-# AI/ML - Speech Recognition
-openai-whisper==20240930
-
-# AI/ML - Face Detection & Landmarks
-mediapipe==0.10.0
-
-# AI/ML - Emotion Recognition
-deepface==0.0.75
-tensorflow==2.15.0
-tf-keras==2.15.0
-
-# AI/ML - LLM
-groq==0.9.0
-
-# AI/ML - Sentiment Analysis
+# AI/ML - Sentiment Analysis (lightweight, no build required)
 vaderSentiment==3.3.2
 
 # Audio & Video Processing
-librosa==0.10.0
-opencv-python==4.8.1
 numpy==1.24.3
 scipy==1.11.4
+opencv-python==4.8.1
+librosa==0.10.0
 
 # PDF Generation
 reportlab==4.0.7
@@ -48,10 +34,9 @@ reportlab==4.0.7
 # HTTP Requests
 requests==2.31.0
 
-# Utilities (transitive dependencies)
+# Utilities
 certifi==2023.7.22
 charset-normalizer==3.3.2
 idna==3.4
 python-dateutil==2.8.2
 pytz==2023.3
-

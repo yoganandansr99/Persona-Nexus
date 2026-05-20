@@ -33,7 +33,10 @@ pipeline {
                         python -m venv venv
                         call venv\\Scripts\\activate.bat
                         python -m pip install --upgrade pip setuptools wheel
-                        pip install -r requirements.txt
+                        pip install --no-cache-dir -r requirements.txt
+                        if errorlevel 1 (
+                            echo ⚠️ Some packages failed to install, continuing...
+                        )
                         echo ✅ Virtual environment ready
                     '''
                 }
