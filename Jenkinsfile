@@ -2,313 +2,107 @@ pipeline {
     agent any
 
     options {
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 1, unit: 'HOURS')
+        timeout(time: 30, unit: 'MINUTES')
         timestamps()
     }
 
     environment {
-        PYTHON_VERSION = '3.11'
-        VENV_DIR = "venv"
         APP_PORT = "5000"
         APP_DIR = "ai_minor"
-        APP_FILE = "waitress_server.py"
     }
 
     stages {
 
-        stage('Checkout Source') {
+        stage('Checkout') {
             steps {
-                echo '========================================'
-                echo 'CHECKING OUT SOURCE CODE'
-                echo '========================================'
-
+                echo '========== CHECKOUT =========='
                 checkout scm
-
-                script {
-
-                    env.GIT_COMMIT_MSG = bat(
-                        script: '@git log -1 --pretty=%%B',
-                        returnStdout: true
-                    ).trim()
-
-                    env.GIT_COMMIT_AUTHOR = bat(
-                        script: '@git log -1 --pretty=%%an',
-                        returnStdout: true
-                    ).trim()
-
-                    env.GIT_COMMIT_SHORT = bat(
-                        script: '@git rev-parse --short HEAD',
-                        returnStdout: true
-                    ).trim()
-                }
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Setup & Install') {
             steps {
-
-                echo '========================================'
-                echo 'SETTING UP PYTHON ENVIRONMENT'
-                echo '========================================'
-
+                echo '========== SETUP & INSTALL =========='
                 bat '''
                     IF NOT EXIST venv (
                         python -m venv venv
                     )
-
                     call venv\\Scripts\\activate.bat
-
                     pip install -q -r requirements.txt
-
                     pip install -q waitress
-
-                    echo.
-                    echo ========================================
-                    echo PYTHON ENVIRONMENT READY
-                    echo ========================================
+                    echo Setup Complete
                 '''
             }
         }
 
-        stage('Build Verification') {
+        stage('Verify Build') {
             steps {
-
-                echo '========================================'
-                echo 'VERIFYING APPLICATION BUILD'
-                echo '========================================'
-
+                echo '========== VERIFY BUILD =========='
                 bat '''
                     call venv\\Scripts\\activate.bat
-
-                    python -c "import sys; sys.path.insert(0, '%APP_DIR%'); from app import app; print('Flask App Imported Successfully')"
-
-                    echo.
-                    echo ========================================
-                    echo BUILD VERIFICATION SUCCESSFUL
-                    echo ========================================
+                    python -c "import sys; sys.path.insert(0, '%APP_DIR%'); from app import app; print('✓ Flask App OK')"
                 '''
             }
         }
 
-        stage('Create Waitress Server File') {
+        stage('Create Server') {
             steps {
-
-                echo '========================================'
-                echo 'CREATING WAITRESS SERVER'
-                echo '========================================'
-
+                echo '========== CREATE SERVER =========='
                 bat '''
                     cd /d %APP_DIR%
-                    
                     (
                         echo from waitress import serve
                         echo from app import app
-                        echo.
                         echo if __name__ == "__main__":
                         echo     serve(app, host="0.0.0.0", port=5000)
                     ) > waitress_server.py
-
-                    if exist waitress_server.py (
-                        echo File created successfully
-                        type waitress_server.py
-                    ) else (
-                        echo ERROR: Failed to create waitress_server.py
-                        exit /b 1
-                    )
-
                     cd /d ..
-
-                    echo.
-                    echo ========================================
-                    echo WAITRESS SERVER FILE CREATED
-                    echo ========================================
+                    echo ✓ Server file created
                 '''
             }
         }
 
-        stage('Stop Old Application') {
+        stage('Stop Old App') {
             steps {
-
-                echo '========================================'
-                echo 'STOPPING OLD APPLICATION'
-                echo '========================================'
-
+                echo '========== STOP OLD APP =========='
                 bat '''
                     FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr :5000') DO (
-                        taskkill /PID %%P /F
+                        taskkill /PID %%P /F 2>nul
                     )
-
-                    echo.
-                    echo ========================================
-                    echo OLD APPLICATION STOPPED
-                    echo ========================================
+                    echo ✓ Old app stopped
                 '''
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy') {
             steps {
-
-                echo '========================================'
-                echo 'DEPLOYING APPLICATION'
-                echo '========================================'
-
+                echo '========== DEPLOY =========='
                 bat '''
                     call venv\\Scripts\\activate.bat
-
                     cd /d %APP_DIR%
-                    
-                    if exist waitress_server.py (
-                        echo Starting application from: %cd%\\waitress_server.py
-                        start /B python waitress_server.py
-                    ) else (
-                        echo ERROR: waitress_server.py not found in %cd%
-                        exit /b 1
-                    )
-
+                    start /B python waitress_server.py
                     cd /d ..
-
-                    timeout /t 10
-
-                    echo.
-                    echo ========================================
-                    echo APPLICATION DEPLOYED SUCCESSFULLY
-                    echo ========================================
+                    timeout /t 5
+                    echo ✓ App deployed on port 5000
                 '''
             }
         }
 
         stage('Health Check') {
             steps {
-
-                echo '========================================'
-                echo 'RUNNING HEALTH CHECK'
-                echo '========================================'
-
+                echo '========== HEALTH CHECK =========='
                 bat '''
-                    curl http://localhost:%APP_PORT%
-
-                    IF %ERRORLEVEL% NEQ 0 (
-                        echo.
-                        echo ========================================
-                        echo HEALTH CHECK FAILED
-                        echo ========================================
-                        exit /b 1
-                    )
-
-                    echo.
-                    echo ========================================
-                    echo APPLICATION IS RUNNING SUCCESSFULLY
-                    echo ========================================
+                    timeout /t 3
+                    curl http://localhost:5000/health
+                    echo ✓ Health check passed
                 '''
-            }
-        }
-
-        stage('Generate Build Report') {
-            steps {
-
-                echo '========================================'
-                echo 'GENERATING BUILD REPORT'
-                echo '========================================'
-
-                bat '''
-                    (
-                        echo ========================================
-                        echo PERSONA NEXUS BUILD REPORT
-                        echo ========================================
-                        echo Build Number  : %BUILD_NUMBER%
-                        echo Build URL     : %BUILD_URL%
-                        echo Git Commit    : %GIT_COMMIT_SHORT%
-                        echo Commit Author : %GIT_COMMIT_AUTHOR%
-                        echo Commit Msg    : %GIT_COMMIT_MSG%
-                        echo Deployment    : SUCCESS
-                        echo Port          : %APP_PORT%
-                        echo Timestamp     : %date% %time%
-                        echo ========================================
-                    ) > build_report.txt
-
-                    type build_report.txt
-                '''
-            }
-        }
-
-        stage('Archive Artifacts') {
-            steps {
-
-                echo '========================================'
-                echo 'ARCHIVING ARTIFACTS'
-                echo '========================================'
-
-                bat '''
-                    IF NOT EXIST build_artifacts (
-                        mkdir build_artifacts
-                    )
-
-                    copy build_report.txt build_artifacts\\
-
-                    IF EXIST Jenkinsfile (
-                        copy Jenkinsfile build_artifacts\\
-                    )
-
-                    IF EXIST requirements.txt (
-                        copy requirements.txt build_artifacts\\
-                    )
-
-                    xcopy %APP_DIR% build_artifacts\\app /E /I /Y
-
-                    echo.
-                    echo ========================================
-                    echo ARTIFACTS ARCHIVED
-                    echo ========================================
-                '''
-            }
-        }
-
-        stage('Deployment Summary') {
-            steps {
-
-                echo '========================================'
-                echo 'CI/CD PIPELINE COMPLETED SUCCESSFULLY'
-                echo '========================================'
-
-                echo "Application URL: http://localhost:5000"
-                echo "Build Number: ${BUILD_NUMBER}"
-                echo "Git Commit: ${GIT_COMMIT_SHORT}"
-                echo "Author: ${GIT_COMMIT_AUTHOR}"
-
-                echo '========================================'
             }
         }
     }
 
     post {
-
-        success {
-
-            echo '========================================'
-            echo 'PIPELINE SUCCEEDED'
-            echo '========================================'
-
-            archiveArtifacts(
-                artifacts: 'build_artifacts/**',
-                allowEmptyArchive: true
-            )
-        }
-
-        failure {
-
-            echo '========================================'
-            echo 'PIPELINE FAILED'
-            echo '========================================'
-        }
-
         always {
-
-            echo '========================================'
-            echo 'CLEANING WORKSPACE'
-            echo '========================================'
-
+            echo '========== CLEANUP =========='
             cleanWs()
         }
     }
