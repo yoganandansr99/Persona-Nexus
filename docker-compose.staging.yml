@@ -1,0 +1,38 @@
+version: '3.8'
+
+# Staging environment overrides
+services:
+  app:
+    environment:
+      - FLASK_ENV=staging
+      - DEBUG=False
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  mongodb:
+    environment:
+      - MONGO_LOG_LEVEL=warn
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  nginx:
+    environment:
+      - NGINX_ENV=staging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M

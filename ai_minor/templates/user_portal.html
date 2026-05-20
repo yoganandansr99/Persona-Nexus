@@ -1,0 +1,416 @@
+{% extends "layouts/base.html" %}
+{% block title %}Sign In{% endblock %}
+{% block extra_css %}
+<style>
+  .auth-wrap {
+    min-height: calc(100vh - 140px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .auth-panel {
+    width: 100%;
+    max-width: 460px;
+    background: rgba(12, 18, 36, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 24px;
+    padding: 2.8rem 2.4rem;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    backdrop-filter: blur(20px);
+    animation: nx-fade-up 0.6s ease both;
+  }
+
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 2rem;
+  }
+  .auth-logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #22d3ee);
+    box-shadow: 0 0 12px rgba(124,58,237,0.6);
+  }
+  .auth-logo-name {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    color: #f1f5f9;
+  }
+
+  /* Tab switcher */
+  .auth-tabs {
+    display: flex;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(148,163,184,0.12);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 2rem;
+    gap: 4px;
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+  }
+  .auth-tab.active {
+    background: linear-gradient(135deg, rgba(124,58,237,0.5), rgba(34,211,238,0.2));
+    color: #f1f5f9;
+    border: 1px solid rgba(124,58,237,0.35);
+    box-shadow: 0 4px 16px rgba(124,58,237,0.2);
+  }
+
+  /* Form panels */
+  .auth-form { display: none; flex-direction: column; gap: 1.1rem; }
+  .auth-form.visible { display: flex; }
+
+  .auth-heading {
+    font-family: "Syne", sans-serif;
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #f1f5f9;
+    margin: 0 0 0.3rem;
+  }
+  .auth-sub {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0 0 1.4rem;
+  }
+
+  /* Input fields */
+  .auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .auth-field label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .auth-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .auth-input-icon {
+    position: absolute;
+    left: 14px;
+    color: #475569;
+    font-size: 1rem;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+  .auth-input {
+    width: 100%;
+    padding: 0.85rem 1rem 0.85rem 2.6rem;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1.5px solid rgba(148, 163, 184, 0.18);
+    border-radius: 12px;
+    color: #f1f5f9;
+    font-size: 0.97rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    /* Remove browser autofill yellow */
+    -webkit-text-fill-color: #f1f5f9;
+  }
+  .auth-input:focus {
+    outline: none;
+    border-color: #22d3ee;
+    background: rgba(30, 41, 59, 0.95);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+  }
+  .auth-input:focus + .auth-input-icon,
+  .auth-input-wrap:focus-within .auth-input-icon {
+    color: #22d3ee;
+  }
+  /* Kill browser autofill background */
+  .auth-input:-webkit-autofill,
+  .auth-input:-webkit-autofill:hover,
+  .auth-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.95) inset !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  /* Submit button */
+  .auth-btn {
+    width: 100%;
+    padding: 0.95rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.35);
+    margin-top: 0.4rem;
+  }
+  .auth-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(124, 58, 237, 0.5);
+  }
+  .auth-btn:active { transform: translateY(0); }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Divider */
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #334155;
+    font-size: 0.8rem;
+    margin: 0.5rem 0;
+  }
+  .auth-divider::before,
+  .auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(148,163,184,0.12);
+  }
+
+  /* Message box */
+  .auth-msg {
+    display: none;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+  }
+  .auth-msg.error {
+    background: rgba(251, 113, 133, 0.12);
+    border: 1px solid rgba(251, 113, 133, 0.3);
+    color: #fecdd3;
+  }
+  .auth-msg.success {
+    background: rgba(52, 211, 153, 0.12);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    color: #a7f3d0;
+  }
+
+  /* Footer note */
+  .auth-note {
+    text-align: center;
+    margin-top: 1.8rem;
+    font-size: 0.82rem;
+    color: #475569;
+  }
+  .auth-note a { color: #22d3ee; text-decoration: none; }
+  .auth-note a:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-panel">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      <div class="auth-logo-dot"></div>
+      <span class="auth-logo-name">Persona Nexus</span>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tab-login" role="tab" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" role="tab" onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Message box -->
+    <div class="auth-msg" id="authMsg"></div>
+
+    <!-- LOGIN FORM -->
+    <form class="auth-form visible" id="loginForm" autocomplete="off" novalidate>
+      <div>
+        <h2 class="auth-heading">Welcome back</h2>
+        <p class="auth-sub">Sign in to your practice account</p>
+      </div>
+
+      <div class="auth-field">
+        <label for="log_email">Email address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉</span>
+          <input class="auth-input" type="email" id="log_email"
+            placeholder="you@example.com"
+            autocomplete="new-password"
+            autocorrect="off" autocapitalize="off" spellcheck="false"
+            required>
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="log_pass">Password</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔒</span>
+          <input class="auth-input" type="password" id="log_pass"
+            placeholder="Enter your password"
+            autocomplete="new-password"
+            required>
+        </div>
+      </div>
+
+      <button type="submit" class="auth-btn" id="loginBtn">Sign In →</button>
+    </form>
+
+    <!-- SIGNUP FORM -->
+    <form class="auth-form" id="signupForm" autocomplete="off" novalidate>
+      <div>
+        <h2 class="auth-heading">Get started</h2>
+        <p class="auth-sub">Create your free practice account</p>
+      </div>
+
+      <div class="auth-field">
+        <label for="reg_name">Full name</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">👤</span>
+          <input class="auth-input" type="text" id="reg_name"
+            placeholder="Your full name"
+            autocomplete="off"
+            autocorrect="off" autocapitalize="words" spellcheck="false"
+            required>
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="reg_email">Email address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉</span>
+          <input class="auth-input" type="email" id="reg_email"
+            placeholder="you@example.com"
+            autocomplete="off"
+            autocorrect="off" autocapitalize="off" spellcheck="false"
+            required>
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="reg_pass">Password</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔒</span>
+          <input class="auth-input" type="password" id="reg_pass"
+            placeholder="Create a strong password"
+            autocomplete="new-password"
+            required>
+        </div>
+      </div>
+
+      <button type="submit" class="auth-btn" id="signupBtn">Create Account →</button>
+    </form>
+
+    <!-- Footer note -->
+    <p class="auth-note">
+      Back to <a href="{{ url_for('practice.practice_home') }}">Practice portal</a>
+      &nbsp;·&nbsp;
+      <a href="{{ url_for('welcome') }}">Home</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function switchTab(tab) {
+    document.getElementById('loginForm').classList.toggle('visible', tab === 'login');
+    document.getElementById('signupForm').classList.toggle('visible', tab === 'signup');
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+    clearMsg();
+  }
+
+  function showMsg(msg, type = 'error') {
+    const box = document.getElementById('authMsg');
+    box.className = 'auth-msg ' + type;
+    box.style.display = 'block';
+    box.innerText = msg;
+  }
+
+  function clearMsg() {
+    const box = document.getElementById('authMsg');
+    box.style.display = 'none';
+    box.className = 'auth-msg';
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerText = loading ? 'Please wait...' : (btnId === 'loginBtn' ? 'Sign In →' : 'Create Account →');
+  }
+
+  document.getElementById('loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    clearMsg();
+    setLoading('loginBtn', true);
+    try {
+      const res = await fetch('/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('log_email').value.trim(),
+          password: document.getElementById('log_pass').value
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('Login successful! Redirecting...', 'success');
+        setTimeout(() => window.location.href = '/practice/dashboard', 800);
+      } else {
+        showMsg(data.error || 'Login failed. Please check your credentials.');
+      }
+    } catch {
+      showMsg('Network error. Please try again.');
+    }
+    setLoading('loginBtn', false);
+  };
+
+  document.getElementById('signupForm').onsubmit = async (e) => {
+    e.preventDefault();
+    clearMsg();
+    setLoading('signupBtn', true);
+    try {
+      const res = await fetch('/user/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('reg_name').value.trim(),
+          email: document.getElementById('reg_email').value.trim(),
+          password: document.getElementById('reg_pass').value
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('Account created! You can now sign in.', 'success');
+        setTimeout(() => switchTab('login'), 1500);
+      } else {
+        showMsg(data.error || 'Signup failed. Please try again.');
+      }
+    } catch {
+      showMsg('Network error. Please try again.');
+    }
+    setLoading('signupBtn', false);
+  };
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "layouts/base.html" %}
+{% block title %}About{% endblock %}
+{% block content %}
+<div class="nx-card" style="max-width:900px;margin:0 auto;text-align:left;">
+        <h1 class="nx-hero-title" style="text-align:center;">About Persona Nexus</h1>
+        
+        <div class="report-section" style="margin-top: 20px;">
+            <h2 style="margin-bottom: 15px;">How our models work</h2>
+            <p class="nx-lead" style="max-width:none;">Our platform runs proven ML stacks in real time — the same pipeline for practice and company interviews:</p>
+            <ul style="text-align: left; color: var(--nx-muted); font-size: 1.05rem; line-height: 1.8; margin-bottom: 30px;">
+                <li><strong>Whisper:</strong> accurate speech-to-text for every answer.</li>
+                <li><strong>MediaPipe &amp; DeepFace:</strong> focus, blinks, and emotion signals from video.</li>
+                <li><strong>Llama (Groq) &amp; VADER:</strong> relevance, sentiment, and language patterns.</li>
+            </ul>
+            
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid rgba(148,163,184,.2);">
+            
+            <h3 style="margin-bottom: 20px;">What people say</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px; padding: 25px; background: rgba(255,255,255,.04); border-radius: 14px; border: 1px solid var(--nx-border);">
+                    <div style="color: #fbbf24; font-size: 1.2rem; margin-bottom: 10px;">★★★★★</div>
+                    <p style="font-size: 0.95rem; font-style: italic; color: var(--nx-muted);">"The behavioral insights matched how I show up in real interviews."</p>
+                    <strong style="font-size: 0.9rem;">— Sarah J., Software Engineer</strong>
+                </div>
+                <div style="flex: 1; min-width: 250px; padding: 25px; background: rgba(255,255,255,.04); border-radius: 14px; border: 1px solid var(--nx-border);">
+                    <div style="color: #fbbf24; font-size: 1.2rem; margin-bottom: 10px;">★★★★★</div>
+                    <p style="font-size: 0.95rem; font-style: italic; color: var(--nx-muted);">"As a recruiter, structured PDFs and one access link per candidate keeps our process tight."</p>
+                    <strong style="font-size: 0.9rem;">— Michael T., HR Director</strong>
+                </div>
+            </div>
+        </div>
+</div>
+{% endblock %}

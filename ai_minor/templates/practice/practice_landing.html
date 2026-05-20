@@ -1,0 +1,353 @@
+{% extends "layouts/base.html" %}
+{% block title %}Practice portal{% endblock %}
+{% block body_class %}nx-portal-practice{% endblock %}
+{% block extra_css %}
+<style>
+  .auth-hero {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .auth-hero .nx-hero-title { margin-bottom: 0.6rem; }
+
+  .auth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  @media (max-width: 680px) {
+    .auth-grid { grid-template-columns: 1fr; }
+  }
+
+  .auth-panel {
+    background: rgba(12, 18, 36, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 20px;
+    padding: 2rem 1.8rem;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  }
+
+  .auth-panel-title {
+    font-family: "Syne", sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #f1f5f9;
+    margin: 0 0 0.3rem;
+    letter-spacing: -0.02em;
+  }
+  .auth-panel-sub {
+    color: #475569;
+    font-size: 0.85rem;
+    margin: 0 0 1.5rem;
+  }
+
+  .auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+  .auth-field label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .auth-input-wrap { position: relative; }
+  .auth-input-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.95rem;
+    color: #334155;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+  .auth-input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1.5px solid rgba(148, 163, 184, 0.16);
+    border-radius: 11px;
+    color: #f1f5f9;
+    font-size: 0.95rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-text-fill-color: #f1f5f9;
+  }
+  .auth-input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+  }
+  .auth-input-wrap:focus-within .auth-input-icon { color: #7c3aed; }
+  /* Kill autofill yellow */
+  .auth-input:-webkit-autofill,
+  .auth-input:-webkit-autofill:hover,
+  .auth-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.95) inset !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  .auth-btn-primary {
+    width: 100%;
+    padding: 0.9rem;
+    border: none;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    font-size: 0.97rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    box-shadow: 0 8px 28px rgba(124, 58, 237, 0.35);
+    letter-spacing: 0.01em;
+  }
+  .auth-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(124,58,237,0.5); }
+  .auth-btn-primary:active { transform: translateY(0); }
+  .auth-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .auth-btn-ghost {
+    width: 100%;
+    padding: 0.9rem;
+    border: 1.5px solid rgba(148,163,184,0.2);
+    border-radius: 11px;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.97rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .auth-btn-ghost:hover { border-color: rgba(148,163,184,0.4); color: #f1f5f9; background: rgba(255,255,255,0.04); }
+
+  .auth-msg {
+    display: none;
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    text-align: center;
+  }
+  .auth-msg.error { background: rgba(251,113,133,0.12); border: 1px solid rgba(251,113,133,0.3); color: #fecdd3; }
+  .auth-msg.success { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); color: #a7f3d0; }
+
+  /* Logged-in state */
+  .logged-in-panel {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .logged-in-panel .nx-actions { justify-content: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-hero">
+  <h1 class="nx-hero-title">Practice portal</h1>
+  <p class="nx-lead" style="margin: 0 auto;">Unlimited mock interviews — same scoring engine as company runs.</p>
+</div>
+
+<div class="auth-msg" id="msg-box"></div>
+
+{% if not logged_in %}
+<div class="auth-grid">
+
+  <!-- LOGIN -->
+  <div class="auth-panel">
+    <h2 class="auth-panel-title">Sign in</h2>
+    <p class="auth-panel-sub">Access your practice history</p>
+    <form id="loginForm" autocomplete="off" novalidate>
+      <div class="auth-field">
+        <label>Email address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉</span>
+          <input class="auth-input" type="email" id="log_email"
+            placeholder="you@example.com"
+            autocomplete="new-password"
+            autocorrect="off" autocapitalize="off" spellcheck="false" required>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔒</span>
+          <input class="auth-input" type="password" id="log_pass"
+            placeholder="Your password"
+            autocomplete="new-password" required>
+        </div>
+      </div>
+      <button type="submit" class="auth-btn-primary" id="loginBtn">Enter dashboard →</button>
+    </form>
+  </div>
+
+  <!-- SIGNUP -->
+  <div class="auth-panel">
+    <h2 class="auth-panel-title">Create account</h2>
+    <p class="auth-panel-sub">Free — no credit card needed</p>
+    <form id="signupForm" autocomplete="off" novalidate>
+      <div class="auth-field">
+        <label>Full name</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">👤</span>
+          <input class="auth-input" type="text" id="reg_name"
+            placeholder="Your full name"
+            autocomplete="off"
+            autocorrect="off" autocapitalize="words" spellcheck="false" required>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label>Email address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉</span>
+          <input class="auth-input" type="email" id="reg_email"
+            placeholder="you@example.com"
+            autocomplete="off"
+            autocorrect="off" autocapitalize="off" spellcheck="false" required>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔒</span>
+          <input class="auth-input" type="password" id="reg_pass"
+            placeholder="Create a strong password"
+            autocomplete="new-password" required>
+        </div>
+      </div>
+      <button type="submit" class="auth-btn-ghost" id="signupBtn">Sign up</button>
+    </form>
+    <div id="otp_group" style="display:none; margin-top:1.2rem;">
+      <div class="auth-field">
+        <label>Enter OTP from Email</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔐</span>
+          <input class="auth-input" type="text" id="reg_otp" placeholder="123456" autocomplete="off">
+        </div>
+      </div>
+      <button type="button" id="verifyOtpBtn" class="auth-btn-primary">Verify OTP</button>
+    </div>
+  </div>
+
+</div>
+
+{% else %}
+<div class="logged-in-panel">
+  <div class="nx-card" style="text-align:center;">
+    <p class="nx-lead" style="margin:0 0 1.5rem;">You're signed in. Ready to practice?</p>
+    <div class="nx-actions">
+      <a class="nx-btn" href="{{ url_for('practice.practice_dashboard') }}">Go to Dashboard</a>
+      <button type="button" class="nx-btn nx-btn--ghost" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function showMsg(msg, type = 'error') {
+    const box = document.getElementById('msg-box');
+    box.className = 'auth-msg ' + type;
+    box.style.display = 'block';
+    box.innerText = msg;
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function setLoading(id, loading, defaultText) {
+    const btn = document.getElementById(id);
+    btn.disabled = loading;
+    btn.innerText = loading ? 'Please wait...' : defaultText;
+  }
+
+  const loggedIn = {{ logged_in | tojson }};
+
+  if (!loggedIn) {
+    document.getElementById('loginForm').onsubmit = async (e) => {
+      e.preventDefault();
+      setLoading('loginBtn', true, 'Enter dashboard →');
+      const res = await fetch('/practice/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('log_email').value.trim(),
+          password: document.getElementById('log_pass').value
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('Login successful! Redirecting...', 'success');
+        setTimeout(() => window.location.href = '/practice/dashboard', 700);
+      } else {
+        showMsg(data.error || 'Login failed. Check your credentials.');
+        setLoading('loginBtn', false, 'Enter dashboard →');
+      }
+    };
+
+    document.getElementById('signupForm').onsubmit = async (e) => {
+      e.preventDefault();
+      setLoading('signupBtn', true, 'Sign up');
+      const res = await fetch('/practice/api/signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('reg_name').value.trim(),
+          email: document.getElementById('reg_email').value.trim(),
+          password: document.getElementById('reg_pass').value
+        })
+      });
+      const data = await res.json();
+      console.log('Signup response:', data, 'Status:', res.status, 'require_otp:', data.require_otp);
+      if (res.ok) {
+        if (data.require_otp) {
+          console.log('OTP required - showing OTP field');
+          showMsg('OTP sent to your email. Please verify.', 'success');
+          document.getElementById('signupForm').style.display = 'none';
+          document.getElementById('otp_group').style.display = 'block';
+        } else {
+          console.log('No OTP required - account created directly');
+          showMsg('Account created! Sign in with the form on the left.', 'success');
+          document.getElementById('signupForm').reset();
+        }
+      } else {
+        showMsg(data.error || 'Signup failed. Please try again.');
+      }
+      setLoading('signupBtn', false, 'Sign up');
+    };
+
+    document.getElementById('verifyOtpBtn').onclick = async () => {
+      setLoading('verifyOtpBtn', true, 'Verify OTP');
+      const res = await fetch('/practice/api/verify_signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          otp: document.getElementById('reg_otp').value.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('Account created successfully! Sign in with the form on the left.', 'success');
+        document.getElementById('otp_group').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'block';
+        document.getElementById('signupForm').reset();
+      } else {
+        showMsg(data.error || 'OTP verification failed.');
+      }
+      setLoading('verifyOtpBtn', false, 'Verify OTP');
+    };
+  } else {
+    document.getElementById('logoutBtn').onclick = async () => {
+      await fetch('/practice/api/logout', { method: 'POST' });
+      window.location.href = '/practice';
+    };
+  }
+</script>
+{% endblock %}

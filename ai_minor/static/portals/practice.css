@@ -1,0 +1,69 @@
+.portal-body { min-height: 100vh; background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #0f172a 100%); color: #e2e8f0; }
+.practice-portal .portal-nav { background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid #334155; }
+.practice-portal .nav-brand { color: #38bdf8 !important; }
+.practice-portal .portal-hero { text-align: center; padding-top: 2rem; }
+.practice-portal .lead { max-width: 560px; margin: 0 auto 2rem; color: #94a3b8; }
+.practice-portal .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 800px; margin: 0 auto; }
+.practice-portal .portal-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 1.5rem; text-align: left; }
+.practice-portal .portal-msg { margin: 1rem auto; max-width: 560px; padding: 12px; border-radius: 8px; }
+.practice-portal .portal-msg.ok { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+.practice-portal .portal-msg.err { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.practice-portal .history-list { list-style: none; padding: 0; }
+.practice-portal .history-list li { padding: 12px; border-bottom: 1px solid #334155; }
+.practice-portal .badge { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 6px; background: #334155; font-size: 0.85rem; }
+.practice-portal .muted { color: #94a3b8; }
+.practice-portal .form-group label { color: #cbd5e1; }
+
+/* Dark theme inputs: keep typed text visible (global :focus was forcing white bg + light text) */
+.practice-portal .form-group input,
+.practice-portal .form-group select,
+.practice-portal .form-group textarea,
+.practice-portal .user-form input:not([type="checkbox"]):not([type="radio"]),
+.practice-portal .user-form select {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #475569 !important;
+    caret-color: #38bdf8;
+}
+.practice-portal .form-group input:focus,
+.practice-portal .form-group select:focus,
+.practice-portal .form-group textarea:focus,
+.practice-portal .user-form input:focus,
+.practice-portal .user-form select:focus {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2) !important;
+}
+.practice-portal .form-group input::placeholder,
+.practice-portal .form-group textarea::placeholder,
+.practice-portal .user-form input::placeholder {
+    color: #94a3b8 !important;
+}
+
+/* Chrome autofill on dark forms — avoid white box + invisible text */
+.practice-portal input:-webkit-autofill,
+.practice-portal input:-webkit-autofill:hover,
+.practice-portal input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #f8fafc !important;
+    transition: background-color 5000s ease-in-out 0s;
+    box-shadow: 0 0 0 1000px #1e293b inset !important;
+}
+
+.recruiter-portal .form-group input,
+.recruiter-portal .form-group select,
+.recruiter-portal .form-group textarea {
+    background-color: #ffffff;
+    color: #0f172a;
+    border-color: var(--border-light, #e2e8f0);
+}
+.recruiter-portal .form-group input:focus,
+.recruiter-portal .form-group select:focus,
+.recruiter-portal .form-group textarea:focus {
+    background-color: #ffffff;
+    color: #0f172a;
+}
+
+.recruiter-portal .portal-nav { background: #fafafa; border-bottom: 1px solid #e5e7eb; }
+.recruiter-portal .nav-brand { color: #4f46e5 !important; }
+.recruiter-portal { background: #f8fafc; color: #0f172a; }

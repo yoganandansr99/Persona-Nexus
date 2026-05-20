@@ -1,0 +1,131 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+Jenkinsfile
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation & Logs
+*.md
+README*
+LICENSE
+CHANGELOG*
+*.log
+# *.txt excluded because requirements.txt is needed for Docker build
+# *.log.txt excluded instead
+*.log.txt
+
+# Node (if applicable)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Testing
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Project specific
+uploads/
+temp/
+*.pyc
+*.pyo
+.env*
+!.env.example
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Uploads (will be mounted as volume)
+ai_minor/uploads/*
+
+# Documentation
+docs/
+*.md
+README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Node (if any frontend build)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS
+.DS_Store
+Thumbs.db

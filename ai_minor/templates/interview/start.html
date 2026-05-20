@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}Interview setup{% endblock %}
+{% block body_class %}nx-portal-interview{% endblock %}
+{% block content %}
+<div class="nx-card" style="max-width:640px;margin:0 auto;">
+  <p class="nx-lead" style="letter-spacing:.18em;text-transform:uppercase;font-size:.72rem;color:var(--nx-accent2);margin:0 0 .5rem;">Company interview</p>
+  <h1 class="nx-hero-title" style="font-size:2rem;">Ready to begin?</h1>
+  <p class="nx-lead">Confirm your details and start the interview when you are ready. The same AI scoring engine powers the candidate report.</p>
+  {% if error %}
+  <div class="nx-alert nx-alert--err" style="margin:1rem 0;padding:.85rem 1rem;border-radius:12px;background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.35);color:#fecdd3;">{{ error }}</div>
+  {% endif %}
+  <div class="nx-card" style="background:rgba(15,23,42,.94);border:1px solid rgba(148,163,184,.12);margin-bottom:1.5rem;">
+    <div style="padding:1.5rem;">
+      <p style="margin:0 0 .5rem;color:#94a3b8;font-size:.90rem;">Interview</p>
+      <h2 style="margin:0 0 .75rem;color:#f8fafc;">{{ interview.title or 'AI Interview' }}</h2>
+      <p style="margin:0;color:#94a3b8;font-size:.92rem;">Candidate: {{ interview.candidate_name or 'N/A' }}<br>
+      Duration: {{ interview.duration_minutes or 'Flexible' }} minutes<br>
+      Scheduled: {{ interview.start_time or 'Anytime' }}{% if interview.end_time %} - {{ interview.end_time }}{% endif %}</p>
+    </div>
+  </div>
+  <form method="post" class="user-form" style="margin-top:1.5rem;text-align:left;">
+    <div class="form-group">
+      <label for="name">Your name</label>
+      <input id="name" name="name" type="text" autocomplete="name" placeholder="Enter your name" value="{{ default_name }}" required>
+    </div>
+    <div class="form-group">
+      <label for="email">Your email</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email" value="{{ default_email }}" required>
+    </div>
+    <div class="form-group">
+      <label for="age">Age (optional)</label>
+      <input id="age" name="age" type="text" autocomplete="off" placeholder="Enter your age" value="{{ default_age }}">
+    </div>
+    <div class="form-group">
+      <label for="gender">Gender (optional)</label>
+      <input id="gender" name="gender" type="text" autocomplete="off" placeholder="Enter your gender" value="{{ default_gender }}">
+    </div>
+    <button type="submit" class="btn nx-btn" style="width:100%;">Begin interview</button>
+  </form>
+  <p class="nx-lead" style="margin-top:1.5rem;font-size:.9rem;">The interview will use your webcam and microphone. Ensure your browser has permission to use both.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}Support{% endblock %}
+{% block content %}
+<div class="nx-card" style="max-width:600px;margin:0 auto;text-align:left;">
+        <h1 class="nx-hero-title" style="font-size:1.75rem;">Contact support</h1>
+        <p class="nx-lead">Questions, feedback, or technical help — we read every message.</p>
+        
+        {% if error %}
+        <div style="color: #fecaca; background: rgba(239,68,68,.12); padding: 12px; border-radius: 12px; margin-bottom: 20px;">{{ error }}</div>
+        {% endif %}
+
+        <form action="/support" method="POST" class="user-form">
+            <div class="form-group">
+                <label for="name">Your name</label>
+                <input type="text" id="name" name="name" required placeholder="John Doe">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="you@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="query">How can we help?</label>
+                <textarea id="query" name="query" required placeholder="Describe your issue..." style="width: 100%; height: 140px; padding: 14px 16px; border: 2px solid var(--border-light); border-radius: var(--radius-md); font-size: 1rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+            </div>
+            
+            <button type="submit" class="btn nx-btn" style="width: 100%; margin-top: 10px;">Submit</button>
+        </form>
+    </div>
+
+    {% if success %}
+    <div class="ultra-popup-overlay">
+        <div class="ultra-popup-box" style="border-color: rgba(16, 185, 129, 0.5);">
+            <div class="ultra-popup-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: #10b981;">✅</div>
+            <h3 style="color: #10b981;">Sent</h3>
+            <p>{{ success }}</p>
+            <a href="#" onclick="this.closest('.ultra-popup-overlay').style.display='none'; return false;" class="ultra-popup-btn" style="background: linear-gradient(to right, #10b981, #059669); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">OK</a>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}

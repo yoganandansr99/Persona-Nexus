@@ -24,4 +24,3 @@ uploads/
 
 # Ignore model / large data files (optional - include only if you don't want them in Git)
 *.dat
-*.task

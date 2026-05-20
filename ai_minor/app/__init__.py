@@ -1,105 +1,136 @@
 # app/__init__.py
 import os
-import google.generativeai as genai
+import logging
+from dotenv import load_dotenv
+load_dotenv()
+
 import whisper
 from flask import Flask
-import dlib
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from groq import Groq
 from flask_mail import Mail
 
 # --- Flask App Initialization ---
 # Find the correct path to the 'templates' folder relative to this file
 # os.path.dirname(__file__) is the current directory 'app/'
 # os.path.dirname(os.path.dirname(__file__)) goes up one level to the project root
-template_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
-static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static') # Also set static folder path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+template_dir = os.path.join(BASE_DIR, 'templates')
+static_dir = os.path.join(BASE_DIR, 'static')  # Also set static folder path
 
 # Create the Flask app instance and tell it where templates/static files are
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 
-app.secret_key = 'your_very_secret_key_here' # IMPORTANT: Change this for production
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads') # Correct path relative to project root
+# --- Logging Setup ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# --- Secrets from .env ---
+app.secret_key = os.environ.get('SECRET_KEY')
+if not app.secret_key:
+    logger.warning("No SECRET_KEY set in environment. Using a static fallback key. Please set it in .env for production.")
+    app.secret_key = "dev-fallback-secret-key"
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
+
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')  # Correct path relative to project root
 
 # --- Create Upload Folder ---
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-print(f"Upload folder set to: {app.config['UPLOAD_FOLDER']}") # Debug print
+logger.info(f"Upload folder set to: {app.config['UPLOAD_FOLDER']}")
 
-# --- CONFIGURE GEMINI API ---
-print("Configuring APIs and loading models...")
-try:
-    # IMPORTANT: Replace with your key or use environment variables
-    GOOGLE_API_KEY = "AIzaSyAEBaFdmbfTMt1gDa_c5JKCmnXBTPwz_Ec" # <<< PASTE YOUR KEY HERE
-    genai.configure(api_key=GOOGLE_API_KEY)
-    gemini_model = genai.GenerativeModel('gemini-2.5-pro')
-    print("Gemini API configured.")
-except Exception as e:
-    print(f"!!! ERROR configuring Gemini API: {e}. Analysis will proceed without Gemini.")
-    gemini_model = None
+logger.info("Configuring APIs and loading models...")
+
+# --- CONFIGURE GROQ API (MULTI-KEY ROTATION) ---
+groq_clients = []
+current_groq_idx = 0
+
+# Load all keys starting with GROQ_API_KEY (e.g., GROQ_API_KEY, GROQ_API_KEY_2)
+for key, value in os.environ.items():
+    if key.startswith('GROQ_API_KEY') and value.strip():
+        try:
+            client = Groq(api_key=value.strip())
+            groq_clients.append(client)
+        except Exception as e:
+            logger.error(f"Error configuring Groq API for {key}: {e}")
+
+if groq_clients:
+    logger.info(f"Loaded {len(groq_clients)} Groq API keys for automatic rotation.")
+else:
+    logger.warning("No valid GROQ_API_KEY found. AI analysis will be disabled.")
+
+# Helper function to get the currently active client
+def get_groq_client():
+    if not groq_clients:
+        return None
+    return groq_clients[current_groq_idx]
+
+# Helper function to rotate to the next API key when rate limited
+def rotate_groq_key():
+    global current_groq_idx
+    if groq_clients:
+        current_groq_idx = (current_groq_idx + 1) % len(groq_clients)
+        logger.warning(f"Rate limit hit! Rotated to Groq API Key #{current_groq_idx + 1}")
+        return groq_clients[current_groq_idx]
+    return None
+
+# For backward compatibility with modules that import `groq_client` directly (we will update routes to use get_groq_client instead)
+groq_client = get_groq_client()
 
 # --- Load other models ---
 try:
     whisper_model = whisper.load_model("base")
-    print("Whisper model loaded.")
+    logger.info("Whisper model loaded.")
 except Exception as e:
-    print(f"!!! ERROR loading Whisper model: {e}")
+    logger.error(f"!!! ERROR loading Whisper model: {e}")
     whisper_model = None
 
 sentiment_analyzer = SentimentIntensityAnalyzer()
-print("Sentiment Analyzer loaded.")
+logger.info("Sentiment Analyzer loaded.")
 
-# --- dlib setup ---
-dlib_detector = None
-dlib_predictor = None
-lStart, lEnd = (42, 48) # Indices for left eye landmarks based on dlib's 68 points
-rStart, rEnd = (36, 42) # Indices for right eye landmarks based on dlib's 68 points
-EYE_AR_THRESH = 0.25 # Threshold for blink detection
-EYE_AR_CONSEC_FRAMES = 2 # Number of consecutive frames below threshold to count as blink
-try:
-    # Assume predictor file is in the root project directory (one level up from 'app')
-    predictor_path_relative = "shape_predictor_68_face_landmarks.dat"
-    # Get absolute path relative to this __init__.py file's location
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Project root
-    predictor_path_absolute = os.path.join(base_dir, predictor_path_relative)
+# --- Blink Detection Setup (MediaPipe-based, no dlib required) ---
+# MediaPipe Face Mesh landmark indices for eyes
+# Left eye: outer=33, inner=133, top=159, bottom=145, top2=158, bottom2=153
+# Right eye: outer=362, inner=263, top=386, bottom=374, top2=385, bottom2=380
+LEFT_EYE_INDICES  = [33, 160, 158, 133, 153, 144]   # P1..P6 for EAR
+RIGHT_EYE_INDICES = [362, 385, 387, 263, 373, 380]  # P1..P6 for EAR
+EYE_AR_THRESH = 0.25        # EAR threshold for blink
+EYE_AR_CONSEC_FRAMES = 2    # Consecutive frames below threshold = blink
 
-    if not os.path.exists(predictor_path_absolute):
-         # Try looking inside the 'app' directory as a fallback (less ideal)
-         alt_predictor_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), predictor_path_relative)
-         if os.path.exists(alt_predictor_path):
-             predictor_path_absolute = alt_predictor_path
-             print(f"Note: Found predictor file inside 'app' folder: {predictor_path_absolute}")
-         else:
-             raise RuntimeError(f"Predictor file not found at expected path: {predictor_path_absolute} or {alt_predictor_path}")
+logger.info("Blink detection configured using MediaPipe (dlib not required).")
 
-    dlib_detector = dlib.get_frontal_face_detector()
-    dlib_predictor = dlib.shape_predictor(predictor_path_absolute)
-    print(f"Dlib blink detector initialized using predictor: {predictor_path_absolute}")
-except RuntimeError as e:
-    print(f"\n!!! WARNING: Dlib initialization failed: {e}. Blink detection disabled. !!!\n")
-except Exception as e:
-    print(f"\n!!! UNEXPECTED ERROR initializing Dlib: {e}. Blink detection disabled. !!!\n")
-
-
-print("Model loading complete.")
-
-# --- Import Routes (at the bottom) ---
-# This import is placed here to avoid circular dependencies (routes needs 'app')
-
-# In app/__init__.py
-
-# ... (previous code) ...
+logger.info("Model loading complete.")
 
 # --- SMTP / EMAIL CONFIGURATION ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 
-# REPLACE THESE WITH YOUR REAL DETAILS
-app.config['MAIL_USERNAME'] = 'promotionp270@gmail.com' 
-app.config['MAIL_PASSWORD'] = 'lcza opcj apfp kaoi' # Paste the 16-char App Password here
-app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
+mail = Mail(app)  # Initialize Mail
 
-mail = Mail(app) # Initialize Mail
-
-# ... (rest of the code) ...
-
+# --- Import Routes (at the bottom) ---
+# This import is placed here to avoid circular dependencies (routes needs 'app')
 from app import routes
+
+# --- Import New Role-Based Blueprints ---
+try:
+    from app.routes_user import user_bp
+    from app.routes_company import company_bp
+    from app.routes_candidate import candidate_bp
+    from app.candidate_portal.routes import interview_portal_bp
+    from app.practice.routes import practice_bp
+    from app.recruiter.routes import recruiter_bp
+
+    app.register_blueprint(user_bp)
+    app.register_blueprint(company_bp)
+    app.register_blueprint(candidate_bp)
+    app.register_blueprint(interview_portal_bp)
+    app.register_blueprint(practice_bp)
+    app.register_blueprint(recruiter_bp)
+except ImportError as e:
+    logger.warning(f"New modular blueprints not loaded yet: {e}")
