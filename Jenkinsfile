@@ -9,7 +9,7 @@ pipeline {
 
     environment {
         PYTHON_VERSION = '3.11'
-        VENV_DIR = "${WORKSPACE}/venv"
+        VENV_DIR = "${WORKSPACE}\\venv"
     }
 
     stages {
@@ -18,9 +18,9 @@ pipeline {
                 echo '🔄 Checking out code...'
                 checkout scm
                 script {
-                    env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
-                    env.GIT_COMMIT_AUTHOR = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
-                    env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.GIT_COMMIT_MSG = bat(script: '@git log -1 --pretty=%%B', returnStdout: true).trim()
+                    env.GIT_COMMIT_AUTHOR = bat(script: '@git log -1 --pretty=%%an', returnStdout: true).trim()
+                    env.GIT_COMMIT_SHORT = bat(script: '@git rev-parse --short HEAD', returnStdout: true).trim()
                 }
             }
         }
@@ -29,12 +29,12 @@ pipeline {
             steps {
                 echo '⚙️ Setting up Python virtual environment...'
                 script {
-                    sh '''
-                        python3 -m venv ${VENV_DIR}
-                        . ${VENV_DIR}/bin/activate
-                        pip install --upgrade pip setuptools wheel
+                    bat '''
+                        python -m venv %VENV_DIR%
+                        call %VENV_DIR%\\Scripts\\activate.bat
+                        python -m pip install --upgrade pip setuptools wheel
                         pip install -r requirements.txt
-                        echo "✅ Virtual environment ready"
+                        echo ✅ Virtual environment ready
                     '''
                 }
             }
@@ -44,13 +44,13 @@ pipeline {
             steps {
                 echo '📊 Running code quality checks...'
                 script {
-                    sh '''
-                        . ${VENV_DIR}/bin/activate
+                    bat '''
+                        call %VENV_DIR%\\Scripts\\activate.bat
                         
-                        # Check for syntax errors
-                        python -m py_compile ai_minor/app/*.py || true
+                        REM Check for syntax errors
+                        python -m py_compile ai_minor\\app\\*.py
                         
-                        echo "✅ Code quality check completed"
+                        echo ✅ Code quality check completed
                     '''
                 }
             }
@@ -60,13 +60,13 @@ pipeline {
             steps {
                 echo '🔍 Checking dependencies...'
                 script {
-                    sh '''
-                        . ${VENV_DIR}/bin/activate
+                    bat '''
+                        call %VENV_DIR%\\Scripts\\activate.bat
                         
-                        # List installed packages
+                        REM List installed packages
                         pip list
                         
-                        echo "✅ Dependency check completed"
+                        echo ✅ Dependency check completed
                     '''
                 }
             }
@@ -76,15 +76,15 @@ pipeline {
             steps {
                 echo '🔨 Verifying application build...'
                 script {
-                    sh '''
-                        . ${VENV_DIR}/bin/activate
+                    bat '''
+                        call %VENV_DIR%\\Scripts\\activate.bat
                         
-                        # Check if app can be imported
+                        REM Check if app can be imported
                         cd ai_minor
-                        python -c "from app import app; print('✅ Application imports successfully')" || exit 1
+                        python -c "from app import app; print('✅ Application imports successfully')"
                         cd ..
                         
-                        echo "✅ Build verification passed"
+                        echo ✅ Build verification passed
                     '''
                 }
             }
@@ -94,20 +94,22 @@ pipeline {
             steps {
                 echo '📋 Generating build report...'
                 script {
-                    sh '''
-                        echo "========================================" > build_report.txt
-                        echo "BUILD REPORT - Persona Nexus" >> build_report.txt
-                        echo "========================================" >> build_report.txt
-                        echo "Build Number: ${BUILD_NUMBER}" >> build_report.txt
-                        echo "Build URL: ${BUILD_URL}" >> build_report.txt
-                        echo "Git Commit: ${GIT_COMMIT_SHORT}" >> build_report.txt
-                        echo "Commit Message: ${GIT_COMMIT_MSG}" >> build_report.txt
-                        echo "Author: ${GIT_COMMIT_AUTHOR}" >> build_report.txt
-                        echo "Build Status: SUCCESS" >> build_report.txt
-                        echo "Timestamp: $(date)" >> build_report.txt
-                        echo "========================================" >> build_report.txt
+                    bat '''
+                        (
+                            echo ========================================
+                            echo BUILD REPORT - Persona Nexus
+                            echo ========================================
+                            echo Build Number: %BUILD_NUMBER%
+                            echo Build URL: %BUILD_URL%
+                            echo Git Commit: %GIT_COMMIT_SHORT%
+                            echo Commit Message: %GIT_COMMIT_MSG%
+                            echo Author: %GIT_COMMIT_AUTHOR%
+                            echo Build Status: SUCCESS
+                            echo Timestamp: %date% %time%
+                            echo ========================================
+                        ) > build_report.txt
                         
-                        cat build_report.txt
+                        type build_report.txt
                     '''
                 }
             }
@@ -117,14 +119,14 @@ pipeline {
             steps {
                 echo '📦 Archiving build artifacts...'
                 script {
-                    sh '''
-                        # Archive requirements and configuration
-                        mkdir -p build_artifacts
-                        cp requirements.txt build_artifacts/
-                        cp Jenkinsfile build_artifacts/
-                        cp -r ai_minor/app build_artifacts/ || true
+                    bat '''
+                        REM Archive requirements and configuration
+                        if not exist build_artifacts mkdir build_artifacts
+                        copy requirements.txt build_artifacts\\
+                        copy Jenkinsfile build_artifacts\\
+                        xcopy ai_minor\\app build_artifacts\\app /E /I /Y
                         
-                        echo "✅ Artifacts archived"
+                        echo ✅ Artifacts archived
                     '''
                 }
             }
@@ -134,15 +136,15 @@ pipeline {
             steps {
                 echo '📢 Build completed successfully!'
                 script {
-                    sh '''
-                        echo "========================================" 
-                        echo "✅ PIPELINE COMPLETED SUCCESSFULLY"
-                        echo "========================================"
-                        echo "Build Number: ${BUILD_NUMBER}"
-                        echo "Git Commit: ${GIT_COMMIT_SHORT}"
-                        echo "Author: ${GIT_COMMIT_AUTHOR}"
-                        echo "Build URL: ${BUILD_URL}"
-                        echo "========================================"
+                    bat '''
+                        echo ========================================
+                        echo ✅ PIPELINE COMPLETED SUCCESSFULLY
+                        echo ========================================
+                        echo Build Number: %BUILD_NUMBER%
+                        echo Git Commit: %GIT_COMMIT_SHORT%
+                        echo Author: %GIT_COMMIT_AUTHOR%
+                        echo Build URL: %BUILD_URL%
+                        echo ========================================
                     '''
                 }
             }
