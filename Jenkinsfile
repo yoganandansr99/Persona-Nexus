@@ -9,7 +9,7 @@ pipeline {
 
     environment {
         PYTHON_VERSION = '3.11'
-        VENV_DIR = "${WORKSPACE}\\venv"
+        VENV_DIR = "venv"
     }
 
     stages {
@@ -30,8 +30,8 @@ pipeline {
                 echo '⚙️ Setting up Python virtual environment...'
                 script {
                     bat '''
-                        python -m venv %VENV_DIR%
-                        call %VENV_DIR%\\Scripts\\activate.bat
+                        python -m venv venv
+                        call venv\\Scripts\\activate.bat
                         python -m pip install --upgrade pip setuptools wheel
                         pip install -r requirements.txt
                         echo ✅ Virtual environment ready
@@ -45,7 +45,7 @@ pipeline {
                 echo '📊 Running code quality checks...'
                 script {
                     bat '''
-                        call %VENV_DIR%\\Scripts\\activate.bat
+                        call venv\\Scripts\\activate.bat
                         
                         REM Check for syntax errors
                         python -m py_compile ai_minor\\app\\*.py
@@ -61,7 +61,7 @@ pipeline {
                 echo '🔍 Checking dependencies...'
                 script {
                     bat '''
-                        call %VENV_DIR%\\Scripts\\activate.bat
+                        call venv\\Scripts\\activate.bat
                         
                         REM List installed packages
                         pip list
@@ -77,7 +77,7 @@ pipeline {
                 echo '🔨 Verifying application build...'
                 script {
                     bat '''
-                        call %VENV_DIR%\\Scripts\\activate.bat
+                        call venv\\Scripts\\activate.bat
                         
                         REM Check if app can be imported
                         cd ai_minor
