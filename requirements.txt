@@ -28,6 +28,9 @@ groq>=0.4.0
 # AI/ML - Sentiment Analysis
 vaderSentiment>=3.3.0
 
+# AI/ML - Face Detection & Landmarks
+mediapipe>=0.10.0
+
 # Audio & Video Processing
 numpy>=1.24.0
 scipy>=1.11.0
