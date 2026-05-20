@@ -34,6 +34,10 @@ mediapipe>=0.10.0
 # AI/ML - Emotion Recognition
 deepface>=0.0.75
 
+# AI/ML - TensorFlow & Keras
+tensorflow>=2.15.0
+tf-keras>=2.15.0
+
 # Audio & Video Processing
 numpy>=1.24.0
 scipy>=1.11.0
