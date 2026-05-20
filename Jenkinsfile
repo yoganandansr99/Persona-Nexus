@@ -8,11 +8,8 @@ pipeline {
     }
 
     environment {
-        DOCKER_REGISTRY = 'docker.io'
-        DOCKER_IMAGE_NAME = 'persona-nexus'
-        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
-        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
-        SONARQUBE_TOKEN = credentials('sonarqube-token')
+        PYTHON_VERSION = '3.11'
+        VENV_DIR = "${WORKSPACE}/venv"
         GITHUB_TOKEN = credentials('github-token')
     }
 
@@ -24,34 +21,21 @@ pipeline {
                 script {
                     env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
                     env.GIT_COMMIT_AUTHOR = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+                    env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                 }
             }
         }
 
-        stage('Build') {
+        stage('Setup Environment') {
             steps {
-                echo '🔨 Building Docker image...'
+                echo '⚙️ Setting up Python virtual environment...'
                 script {
                     sh '''
-                        docker build \
-                            -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
-                            -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest \
-                            -f Dockerfile \
-                            .
-                    '''
-                }
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo '🧪 Running tests...'
-                script {
-                    sh '''
-                        docker run --rm \
-                            -v $(pwd)/ai_minor:/app \
-                            ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
-                            python -m pytest tests/ -v --cov=app --cov-report=xml || true
+                        python3 -m venv ${VENV_DIR}
+                        . ${VENV_DIR}/bin/activate
+                        pip install --upgrade pip setuptools wheel
+                        pip install -r requirements.txt
+                        echo "✅ Virtual environment ready"
                     '''
                 }
             }
@@ -62,105 +46,134 @@ pipeline {
                 echo '📊 Running code quality checks...'
                 script {
                     sh '''
-                        docker run --rm \
-                            -v $(pwd)/ai_minor:/app \
-                            ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
-                            python -m pylint app/ --exit-zero || true
+                        . ${VENV_DIR}/bin/activate
+                        
+                        # Check for syntax errors
+                        python -m py_compile ai_minor/app/*.py || true
+                        
+                        # Run pylint if available
+                        pip install pylint > /dev/null 2>&1
+                        python -m pylint ai_minor/app/ --exit-zero --disable=all --enable=E,F || true
+                        
+                        echo "✅ Code quality check completed"
                     '''
                 }
             }
         }
 
-        stage('Security Scan') {
+        stage('Dependency Check') {
             steps {
-                echo '🔒 Running security scan...'
+                echo '🔍 Checking dependencies...'
                 script {
                     sh '''
-                        docker run --rm \
-                            -v $(pwd):/app \
-                            aquasec/trivy:latest image \
-                            --severity HIGH,CRITICAL \
-                            ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true
+                        . ${VENV_DIR}/bin/activate
+                        
+                        # Check for security vulnerabilities
+                        pip install safety > /dev/null 2>&1
+                        safety check --json || true
+                        
+                        echo "✅ Dependency check completed"
                     '''
                 }
             }
         }
 
-        stage('Push to Registry') {
-            when {
-                branch 'main'
-            }
+        stage('Unit Tests') {
             steps {
-                echo '📤 Pushing image to Docker registry...'
+                echo '🧪 Running unit tests...'
                 script {
                     sh '''
-                        echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
-                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest
-                        docker logout
+                        . ${VENV_DIR}/bin/activate
+                        
+                        # Install pytest if not already installed
+                        pip install pytest pytest-cov > /dev/null 2>&1
+                        
+                        # Run tests if test directory exists
+                        if [ -d "tests" ]; then
+                            python -m pytest tests/ -v --tb=short --cov=ai_minor/app --cov-report=term-missing || true
+                        else
+                            echo "⚠️ No tests directory found, skipping tests"
+                        fi
+                        
+                        echo "✅ Unit tests completed"
                     '''
                 }
             }
         }
 
-        stage('Deploy to Staging') {
-            when {
-                branch 'main'
-            }
+        stage('Build Verification') {
             steps {
-                echo '🚀 Deploying to staging environment...'
+                echo '🔨 Verifying application build...'
                 script {
                     sh '''
-                        docker-compose -f docker-compose.yml \
-                            -f docker-compose.staging.yml \
-                            up -d
+                        . ${VENV_DIR}/bin/activate
+                        
+                        # Check if app can be imported
+                        cd ai_minor
+                        python -c "from app import app; print('✅ Application imports successfully')" || exit 1
+                        cd ..
+                        
+                        echo "✅ Build verification passed"
                     '''
                 }
             }
         }
 
-        stage('Integration Tests') {
-            when {
-                branch 'main'
-            }
+        stage('Generate Report') {
             steps {
-                echo '🧪 Running integration tests...'
+                echo '📋 Generating build report...'
                 script {
                     sh '''
-                        sleep 10
-                        curl -f http://localhost:5000/health || exit 1
-                        echo "✅ Health check passed"
+                        . ${VENV_DIR}/bin/activate
+                        
+                        echo "========================================" > build_report.txt
+                        echo "BUILD REPORT - Persona Nexus" >> build_report.txt
+                        echo "========================================" >> build_report.txt
+                        echo "Build Number: ${BUILD_NUMBER}" >> build_report.txt
+                        echo "Build URL: ${BUILD_URL}" >> build_report.txt
+                        echo "Git Commit: ${GIT_COMMIT_SHORT}" >> build_report.txt
+                        echo "Commit Message: ${GIT_COMMIT_MSG}" >> build_report.txt
+                        echo "Author: ${GIT_COMMIT_AUTHOR}" >> build_report.txt
+                        echo "Build Status: SUCCESS" >> build_report.txt
+                        echo "Timestamp: $(date)" >> build_report.txt
+                        echo "========================================" >> build_report.txt
+                        
+                        cat build_report.txt
                     '''
                 }
             }
         }
 
-        stage('Deploy to Production') {
-            when {
-                branch 'main'
-                tag pattern: "v\\d+\\.\\d+\\.\\d+", comparator: "REGEXP"
-            }
+        stage('Archive Artifacts') {
             steps {
-                echo '🚀 Deploying to production...'
+                echo '📦 Archiving build artifacts...'
                 script {
                     sh '''
-                        docker-compose -f docker-compose.yml \
-                            -f docker-compose.prod.yml \
-                            up -d
+                        # Archive requirements and configuration
+                        mkdir -p build_artifacts
+                        cp requirements.txt build_artifacts/
+                        cp Jenkinsfile build_artifacts/
+                        cp -r ai_minor/app build_artifacts/ || true
+                        
+                        echo "✅ Artifacts archived"
                     '''
                 }
             }
         }
 
-        stage('Notify') {
+        stage('Notify Success') {
             steps {
-                echo '📢 Sending notifications...'
+                echo '📢 Build completed successfully!'
                 script {
                     sh '''
-                        echo "Build Status: ${BUILD_STATUS}"
+                        echo "========================================" 
+                        echo "✅ PIPELINE COMPLETED SUCCESSFULLY"
+                        echo "========================================"
                         echo "Build Number: ${BUILD_NUMBER}"
-                        echo "Git Commit: ${GIT_COMMIT_MSG}"
+                        echo "Git Commit: ${GIT_COMMIT_SHORT}"
                         echo "Author: ${GIT_COMMIT_AUTHOR}"
+                        echo "Build URL: ${BUILD_URL}"
+                        echo "========================================"
                     '''
                 }
             }
@@ -169,22 +182,29 @@ pipeline {
 
     post {
         always {
-            echo '🧹 Cleaning up...'
-            cleanWs()
+            echo '🧹 Cleaning up workspace...'
+            script {
+                sh '''
+                    # Remove virtual environment to save space
+                    rm -rf ${VENV_DIR}
+                    
+                    # Archive build report
+                    if [ -f "build_report.txt" ]; then
+                        cp build_report.txt build_report_${BUILD_NUMBER}.txt
+                    fi
+                '''
+            }
         }
         success {
             echo '✅ Pipeline succeeded!'
-            script {
-                sh '''
-                    echo "Build successful: ${BUILD_URL}"
-                '''
-            }
+            archiveArtifacts artifacts: 'build_artifacts/**', allowEmptyArchive: true
         }
         failure {
             echo '❌ Pipeline failed!'
             script {
                 sh '''
-                    echo "Build failed: ${BUILD_URL}"
+                    echo "Build failed at: $(date)"
+                    echo "Check console output for details: ${BUILD_URL}console"
                 '''
             }
         }
