@@ -152,36 +152,14 @@ pipeline {
     post {
         always {
             echo '🧹 Cleaning up workspace...'
-            node {
-                script {
-                    sh '''
-                        # Remove virtual environment to save space
-                        rm -rf ${VENV_DIR}
-                        
-                        # Archive build report
-                        if [ -f "build_report.txt" ]; then
-                            cp build_report.txt build_report_${BUILD_NUMBER}.txt
-                        fi
-                    '''
-                }
-            }
+            cleanWs()
         }
         success {
             echo '✅ Pipeline succeeded!'
-            node {
-                archiveArtifacts artifacts: 'build_artifacts/**', allowEmptyArchive: true
-            }
+            archiveArtifacts artifacts: 'build_artifacts/**', allowEmptyArchive: true
         }
         failure {
             echo '❌ Pipeline failed!'
-            node {
-                script {
-                    sh '''
-                        echo "Build failed at: $(date)"
-                        echo "Check console output for details: ${BUILD_URL}console"
-                    '''
-                }
-            }
         }
     }
 }
