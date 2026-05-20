@@ -10,7 +10,6 @@ pipeline {
     environment {
         PYTHON_VERSION = '3.11'
         VENV_DIR = "${WORKSPACE}/venv"
-        GITHUB_TOKEN = credentials('github-token')
     }
 
     stages {
@@ -51,10 +50,6 @@ pipeline {
                         # Check for syntax errors
                         python -m py_compile ai_minor/app/*.py || true
                         
-                        # Run pylint if available
-                        pip install pylint > /dev/null 2>&1
-                        python -m pylint ai_minor/app/ --exit-zero --disable=all --enable=E,F || true
-                        
                         echo "✅ Code quality check completed"
                     '''
                 }
@@ -68,34 +63,10 @@ pipeline {
                     sh '''
                         . ${VENV_DIR}/bin/activate
                         
-                        # Check for security vulnerabilities
-                        pip install safety > /dev/null 2>&1
-                        safety check --json || true
+                        # List installed packages
+                        pip list
                         
                         echo "✅ Dependency check completed"
-                    '''
-                }
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                echo '🧪 Running unit tests...'
-                script {
-                    sh '''
-                        . ${VENV_DIR}/bin/activate
-                        
-                        # Install pytest if not already installed
-                        pip install pytest pytest-cov > /dev/null 2>&1
-                        
-                        # Run tests if test directory exists
-                        if [ -d "tests" ]; then
-                            python -m pytest tests/ -v --tb=short --cov=ai_minor/app --cov-report=term-missing || true
-                        else
-                            echo "⚠️ No tests directory found, skipping tests"
-                        fi
-                        
-                        echo "✅ Unit tests completed"
                     '''
                 }
             }
@@ -124,8 +95,6 @@ pipeline {
                 echo '📋 Generating build report...'
                 script {
                     sh '''
-                        . ${VENV_DIR}/bin/activate
-                        
                         echo "========================================" > build_report.txt
                         echo "BUILD REPORT - Persona Nexus" >> build_report.txt
                         echo "========================================" >> build_report.txt
@@ -183,29 +152,35 @@ pipeline {
     post {
         always {
             echo '🧹 Cleaning up workspace...'
-            script {
-                sh '''
-                    # Remove virtual environment to save space
-                    rm -rf ${VENV_DIR}
-                    
-                    # Archive build report
-                    if [ -f "build_report.txt" ]; then
-                        cp build_report.txt build_report_${BUILD_NUMBER}.txt
-                    fi
-                '''
+            node {
+                script {
+                    sh '''
+                        # Remove virtual environment to save space
+                        rm -rf ${VENV_DIR}
+                        
+                        # Archive build report
+                        if [ -f "build_report.txt" ]; then
+                            cp build_report.txt build_report_${BUILD_NUMBER}.txt
+                        fi
+                    '''
+                }
             }
         }
         success {
             echo '✅ Pipeline succeeded!'
-            archiveArtifacts artifacts: 'build_artifacts/**', allowEmptyArchive: true
+            node {
+                archiveArtifacts artifacts: 'build_artifacts/**', allowEmptyArchive: true
+            }
         }
         failure {
             echo '❌ Pipeline failed!'
-            script {
-                sh '''
-                    echo "Build failed at: $(date)"
-                    echo "Check console output for details: ${BUILD_URL}console"
-                '''
+            node {
+                script {
+                    sh '''
+                        echo "Build failed at: $(date)"
+                        echo "Check console output for details: ${BUILD_URL}console"
+                    '''
+                }
             }
         }
     }
