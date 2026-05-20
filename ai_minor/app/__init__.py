@@ -4,7 +4,12 @@ import logging
 from dotenv import load_dotenv
 load_dotenv()
 
-import whisper
+try:
+    import whisper
+except ImportError as e:
+    logging.warning(f"Whisper module not available: {e}. Speech recognition will be disabled.")
+    whisper = None
+
 from flask import Flask
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from groq import Groq
@@ -84,8 +89,12 @@ groq_client = get_groq_client()
 
 # --- Load other models ---
 try:
-    whisper_model = whisper.load_model("base")
-    logger.info("Whisper model loaded.")
+    if whisper is not None:
+        whisper_model = whisper.load_model("base")
+        logger.info("Whisper model loaded.")
+    else:
+        whisper_model = None
+        logger.warning("Whisper module not available. Speech recognition disabled.")
 except Exception as e:
     logger.error(f"!!! ERROR loading Whisper model: {e}")
     whisper_model = None

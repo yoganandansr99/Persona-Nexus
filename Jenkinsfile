@@ -131,11 +131,7 @@ pipeline {
                 bat '''
                     call venv\\Scripts\\activate.bat
 
-                    cd %APP_DIR%
-
-                    python -c "from app import app; print('Flask App Imported Successfully')"
-
-                    cd ..
+                    python -c "import sys; sys.path.insert(0, '%APP_DIR%'); from app import app; print('Flask App Imported Successfully')"
 
                     echo.
                     echo ========================================
@@ -153,14 +149,25 @@ pipeline {
                 echo '========================================'
 
                 bat '''
+                    cd /d %APP_DIR%
+                    
                     (
                         echo from waitress import serve
                         echo from app import app
                         echo.
-                        echo serve(app, host="0.0.0.0", port=5000)
-                    ) > %APP_DIR%\\waitress_server.py
+                        echo if __name__ == "__main__":
+                        echo     serve(app, host="0.0.0.0", port=5000)
+                    ) > waitress_server.py
 
-                    type %APP_DIR%\\waitress_server.py
+                    if exist waitress_server.py (
+                        echo File created successfully
+                        type waitress_server.py
+                    ) else (
+                        echo ERROR: Failed to create waitress_server.py
+                        exit /b 1
+                    )
+
+                    cd /d ..
 
                     echo.
                     echo ========================================
@@ -200,9 +207,17 @@ pipeline {
                 bat '''
                     call venv\\Scripts\\activate.bat
 
-                    cd %APP_DIR%
+                    cd /d %APP_DIR%
+                    
+                    if exist waitress_server.py (
+                        echo Starting application from: %cd%\\waitress_server.py
+                        start /B python waitress_server.py
+                    ) else (
+                        echo ERROR: waitress_server.py not found in %cd%
+                        exit /b 1
+                    )
 
-                    start /B python %APP_FILE%
+                    cd /d ..
 
                     timeout /t 10
 
