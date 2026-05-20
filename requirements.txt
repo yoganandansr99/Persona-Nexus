@@ -31,6 +31,9 @@ vaderSentiment>=3.3.0
 # AI/ML - Face Detection & Landmarks
 mediapipe>=0.10.0
 
+# AI/ML - Emotion Recognition
+deepface>=0.0.75
+
 # Audio & Video Processing
 numpy>=1.24.0
 scipy>=1.11.0

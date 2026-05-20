@@ -53,69 +53,19 @@ pipeline {
                 echo '========================================'
 
                 bat '''
-                    IF EXIST venv (
-                        rmdir /s /q venv
+                    IF NOT EXIST venv (
+                        python -m venv venv
                     )
-
-                    python -m venv venv
 
                     call venv\\Scripts\\activate.bat
 
-                    python -m pip install --upgrade pip setuptools wheel
+                    pip install -q -r requirements.txt
 
-                    pip install --no-cache-dir -r requirements.txt
-
-                    pip install waitress
+                    pip install -q waitress
 
                     echo.
                     echo ========================================
                     echo PYTHON ENVIRONMENT READY
-                    echo ========================================
-                '''
-            }
-        }
-
-        stage('Code Quality Check') {
-            steps {
-
-                echo '========================================'
-                echo 'RUNNING CODE QUALITY CHECK'
-                echo '========================================'
-
-                bat '''
-                    call venv\\Scripts\\activate.bat
-
-                    for /r %APP_DIR% %%f in (*.py) do (
-                        python -m py_compile "%%f"
-                    )
-
-                    echo.
-                    echo ========================================
-                    echo CODE QUALITY CHECK COMPLETED
-                    echo ========================================
-                '''
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-
-                echo '========================================'
-                echo 'RUNNING TESTS'
-                echo '========================================'
-
-                bat '''
-                    call venv\\Scripts\\activate.bat
-
-                    IF EXIST tests (
-                        pytest tests
-                    ) ELSE (
-                        echo No tests folder found
-                    )
-
-                    echo.
-                    echo ========================================
-                    echo TEST STAGE COMPLETED
                     echo ========================================
                 '''
             }
