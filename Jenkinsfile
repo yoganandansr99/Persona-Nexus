@@ -50,8 +50,10 @@ pipeline {
                     bat '''
                         call venv\\Scripts\\activate.bat
                         
-                        REM Check for syntax errors
-                        python -m py_compile ai_minor\\app\\*.py
+                        REM Check for syntax errors in all Python files
+                        for /r ai_minor\\app %%f in (*.py) do (
+                            python -m py_compile "%%f"
+                        )
                         
                         echo ✅ Code quality check completed
                     '''
