@@ -25,7 +25,7 @@ pipeline {
             steps {
                 echo '========== CREATE SERVER =========='
                 bat '''
-                    cd /d %APP_DIR%
+                    cd /d ai_minor
                     (
                         echo from waitress import serve
                         echo from app import app
@@ -54,10 +54,10 @@ pipeline {
             steps {
                 echo '========== DEPLOY =========='
                 bat '''
-                    cd /d %APP_DIR%
+                    cd /d ai_minor
                     start /B python waitress_server.py
                     cd /d ..
-                    timeout /t 5
+                    ping -n 6 127.0.0.1 >nul
                     echo ✓ App deployed on port 5000
                 '''
             }
@@ -67,7 +67,7 @@ pipeline {
             steps {
                 echo '========== HEALTH CHECK =========='
                 bat '''
-                    timeout /t 3
+                    ping -n 4 127.0.0.1 >nul
                     curl http://localhost:5000/health
                     echo ✓ Health check passed
                 '''
