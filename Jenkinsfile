@@ -26,6 +26,7 @@ pipeline {
                     FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr :5000') DO (
                         taskkill /PID %%P /F >nul 2>&1
                     )
+                    echo ✓ Old app stopped
                 '''
             }
         }
@@ -36,6 +37,8 @@ pipeline {
                 bat '''
                     cd /d ai_minor
                     start "" /B python run.py
+                    cd /d ..
+                    echo ✓ App started
                 '''
             }
         }
