@@ -22,12 +22,14 @@ pipeline {
         stage('Stop Old Server') {
             steps {
                 echo '========== STOP OLD APP =========='
-                bat '''
-                    FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr :5000') DO (
-                        taskkill /PID %%P /F >nul 2>&1
-                    )
-                    echo ✓ Old app stopped
-                '''
+                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                    bat '''
+                        FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr :5000') DO (
+                            taskkill /PID %%P /F 2>nul || echo Process not found
+                        )
+                        echo ✓ Old app stopped
+                    '''
+                }
             }
         }
 
