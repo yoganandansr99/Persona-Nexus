@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     options {
-        timeout(time: 5, unit: 'MINUTES')
+        timeout(time: 15, unit: 'MINUTES')
         timestamps()
     }
 
@@ -23,7 +23,7 @@ pipeline {
             steps {
                 echo '========== INSTALL =========='
                 bat '''
-                    pip install -r requirements.txt
+                    pip install --no-cache-dir -r requirements.txt
                 '''
             }
         }
