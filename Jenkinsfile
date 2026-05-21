@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     options {
-        timeout(time: 10, unit: 'MINUTES')
+        timeout(time: 5, unit: 'MINUTES')
         timestamps()
     }
 
@@ -12,53 +12,39 @@ pipeline {
     }
 
     stages {
-
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 echo '========== CHECKOUT =========='
                 checkout scm
-                echo '✓ Code checked out'
             }
         }
 
-        stage('Create Server') {
+        stage('Install Dependencies') {
             steps {
-                echo '========== CREATE SERVER =========='
+                echo '========== INSTALL =========='
                 bat '''
-                    cd /d ai_minor
-                    (
-                        echo from waitress import serve
-                        echo from app import app
-                        echo if __name__ == "__main__":
-                        echo     serve^(app, host="0.0.0.0", port=5000^)
-                    ) > waitress_server.py
-                    cd /d ..
-                    echo ✓ Server file created
+                    pip install -r requirements.txt
                 '''
             }
         }
 
-        stage('Stop Old App') {
+        stage('Stop Old Server') {
             steps {
                 echo '========== STOP OLD APP =========='
                 bat '''
                     FOR /F "tokens=5" %%P IN ('netstat -ano ^| findstr :5000') DO (
-                        taskkill /PID %%P /F 2>nul
+                        taskkill /PID %%P /F >nul 2>&1
                     )
-                    echo ✓ Old app stopped
                 '''
             }
         }
 
-        stage('Deploy') {
+        stage('Start New Server') {
             steps {
-                echo '========== DEPLOY =========='
+                echo '========== START APP =========='
                 bat '''
                     cd /d ai_minor
-                    start /B python waitress_server.py
-                    cd /d ..
-                    ping -n 6 127.0.0.1 >nul
-                    echo ✓ App deployed on port 5000
+                    start "" /B python run.py
                 '''
             }
         }
@@ -67,17 +53,25 @@ pipeline {
             steps {
                 echo '========== HEALTH CHECK =========='
                 bat '''
-                    ping -n 4 127.0.0.1 >nul
-                    curl http://localhost:5000/health
-                    echo ✓ Health check passed
+                    ping -n 6 127.0.0.1 >nul
+                    curl http://127.0.0.1:5000
                 '''
             }
         }
     }
 
     post {
+        success {
+            echo '===================================='
+            echo 'CI/CD SUCCESSFUL'
+            echo 'Public URL:'
+            echo 'https://hasty-hydrogen-wind.ngrok-free.dev/'
+            echo '===================================='
+        }
+        failure {
+            echo 'Build or deployment failed'
+        }
         always {
-            echo '========== CLEANUP =========='
             cleanWs()
         }
     }
