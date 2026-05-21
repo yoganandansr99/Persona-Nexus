@@ -30,7 +30,7 @@ pipeline {
                         echo from waitress import serve
                         echo from app import app
                         echo if __name__ == "__main__":
-                        echo     serve(app, host="0.0.0.0", port=5000)
+                        echo     serve^(app, host="0.0.0.0", port=5000^)
                     ) > waitress_server.py
                     cd /d ..
                     echo ✓ Server file created
