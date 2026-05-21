@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     options {
-        timeout(time: 15, unit: 'MINUTES')
+        timeout(time: 10, unit: 'MINUTES')
         timestamps()
     }
 
@@ -16,15 +16,6 @@ pipeline {
             steps {
                 echo '========== CHECKOUT =========='
                 checkout scm
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                echo '========== INSTALL =========='
-                bat '''
-                    pip install --no-cache-dir -r requirements.txt
-                '''
             }
         }
 
